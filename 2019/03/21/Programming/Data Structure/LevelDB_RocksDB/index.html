@@ -1,0 +1,317 @@
+<!DOCTYPE html><html class="theme-next gemini use-motion" lang="zh"><head><meta name="generator" content="Hexo 3.8.0"><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=2"><meta name="theme-color" content="#222"><link rel="stylesheet" href="//cdn.jsdelivr.net/npm/font-awesome@4/css/font-awesome.min.css"><link rel="stylesheet" href="/css/main.css?v=7.0.1"><link rel="apple-touch-icon" sizes="180x180" href="/images/logo/apple-touch-icon.png?v=7.0.1"><link rel="icon" type="image/png" sizes="32x32" href="/images/logo/favicon-32x32.png?v=7.0.1"><link rel="icon" type="image/png" sizes="16x16" href="/images/logo/favicon-16x16.png?v=7.0.1"><link rel="mask-icon" href="/images/logo/safari-pinned-tab.svg?v=7.0.1" color="#222"><link rel="manifest" href="/images/logo/site.webmanifest"><meta name="msapplication-config" content="/images/logo/browserconfig.xml"><script id="hexo.configurations">var NexT=window.NexT||{},CONFIG={root:"/",scheme:"Gemini",version:"7.0.1",sidebar:{position:"left",display:"post",offset:12,onmobile:!1,dimmer:!1},back2top:!0,back2top_sidebar:!0,fancybox:!1,fastclick:!1,lazyload:!0,tabs:!0,motion:{enable:!0,async:!1,transition:{post_block:null,post_header:null,post_body:"slideDownIn",coll_header:"slideDownIn",sidebar:"flipXIn"}},algolia:{applicationID:"",apiKey:"",indexName:"",hits:{per_page:10},labels:{input_placeholder:"Search for Posts",hits_empty:"We didn't find any results for the search: ${query}",hits_stats:"${hits} results found in ${time} ms"}}}</script><meta name="description" content="阅读本文之前建议对LSM树有一定的认识。本文将介绍LSM Tree的主流实现，即LevelDB和RocksDB作为KV数据库。 两者对外提供的主要接口基本一致，就是包含以下5个基本操作  get(K) 查找key K对应的value put(K,V) 插入键值对（K，V） update(K,V) 查找key K对应的value更新为V delete(K) 删除key K对应的条目 scan(K1,"><meta property="og:type" content="article"><meta property="og:title" content="LevelDB 和 RocksDB 结构详解"><meta property="og:url" content="http://daemondshu.github.io/2019/03/21/Programming/Data Structure/LevelDB_RocksDB/index.html"><meta property="og:site_name" content="Daemon.D.Blog"><meta property="og:description" content="阅读本文之前建议对LSM树有一定的认识。本文将介绍LSM Tree的主流实现，即LevelDB和RocksDB作为KV数据库。 两者对外提供的主要接口基本一致，就是包含以下5个基本操作  get(K) 查找key K对应的value put(K,V) 插入键值对（K，V） update(K,V) 查找key K对应的value更新为V delete(K) 删除key K对应的条目 scan(K1,"><meta property="og:locale" content="zh"><meta property="og:image" content="http://daemondshu.github.io/images/loading2.svg"><meta property="og:image" content="http://daemondshu.github.io/images/loading2.svg"><meta property="og:image" content="http://daemondshu.github.io/images/loading2.svg"><meta property="og:image" content="http://daemondshu.github.io/images/loading2.svg"><meta property="og:image" content="http://daemondshu.github.io/images/loading2.svg"><meta property="og:image" content="http://daemondshu.github.io/images/loading2.svg"><meta property="og:image" content="http://daemondshu.github.io/images/loading2.svg"><meta property="og:image" content="http://daemondshu.github.io/images/loading2.svg"><meta property="og:image" content="http://daemondshu.github.io/images/loading2.svg"><meta property="og:image" content="http://daemondshu.github.io/images/loading2.svg"><meta property="og:image" content="http://daemondshu.github.io/images/loading2.svg"><meta property="og:updated_time" content="2019-07-11T17:52:28.092Z"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="LevelDB 和 RocksDB 结构详解"><meta name="twitter:description" content="阅读本文之前建议对LSM树有一定的认识。本文将介绍LSM Tree的主流实现，即LevelDB和RocksDB作为KV数据库。 两者对外提供的主要接口基本一致，就是包含以下5个基本操作  get(K) 查找key K对应的value put(K,V) 插入键值对（K，V） update(K,V) 查找key K对应的value更新为V delete(K) 删除key K对应的条目 scan(K1,"><meta name="twitter:image" content="http://daemondshu.github.io/images/loading2.svg"><link rel="canonical" href="http://daemondshu.github.io/2019/03/21/Programming/Data Structure/LevelDB_RocksDB/"><script id="page.configurations">CONFIG.page={sidebar:""}</script><title>LevelDB 和 RocksDB 结构详解 | Daemon.D.Blog</title><noscript><style>.sidebar-inner,.use-motion .brand,.use-motion .collection-title,.use-motion .comments,.use-motion .menu-item,.use-motion .motion-element,.use-motion .pagination,.use-motion .post-block,.use-motion .post-body,.use-motion .post-header{opacity:initial}.use-motion .logo,.use-motion .site-subtitle,.use-motion .site-title{opacity:initial;top:initial}.use-motion .logo-line-before i{left:initial}.use-motion .logo-line-after i{right:initial}</style></noscript></head><body itemscope itemtype="http://schema.org/WebPage" lang="zh"><div class="container sidebar-position-left page-post-detail"><div class="headband"></div><header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="header-inner"><div class="site-brand-wrapper"><div class="site-meta"><div class="custom-logo-site-title"><a href="/" class="brand" rel="start"><span class="logo-line-before"><i></i></span> <span class="site-title">Daemon.D.Blog</span> <span class="logo-line-after"><i></i></span></a></div></div><div class="site-nav-toggle"><button aria-label="Toggle navigation bar"><span class="btn-bar"></span> <span class="btn-bar"></span> <span class="btn-bar"></span></button></div></div><nav class="site-nav"><ul id="menu" class="menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i><br>Home</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i><br>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i><br>Archives</a></li><li class="menu-item menu-item-search"><a href="javascript:;" class="popup-trigger"><i class="menu-item-icon fa fa-search fa-fw"></i><br>Search</a></li></ul><div class="site-search"><div class="popup search-popup local-search-popup"><div class="local-search-header clearfix"><span class="search-icon"><i class="fa fa-search"></i> </span><span class="popup-btn-close"><i class="fa fa-times-circle"></i></span><div class="local-search-input-wrapper"><input autocomplete="off" placeholder="Searching..." spellcheck="false" type="text" id="local-search-input"></div></div><div id="local-search-result"></div></div></div></nav></div></header><main id="main" class="main"><div class="main-inner"><div class="content-wrap"><div id="content" class="content"><div id="posts" class="posts-expand"><article class="post post-type-normal" itemscope itemtype="http://schema.org/Article"><div class="post-block"><link itemprop="mainEntityOfPage" href="http://daemondshu.github.io/2019/03/21/Programming/Data Structure/LevelDB_RocksDB/"><span hidden itemprop="author" itemscope itemtype="http://schema.org/Person"><meta itemprop="name" content="DaemondShu"><meta itemprop="description" content><meta itemprop="image" content="/images/user_256px.jpg"></span><span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization"><meta itemprop="name" content="Daemon.D.Blog"></span><header class="post-header"><h1 class="post-title" itemprop="name headline">LevelDB 和 RocksDB 结构详解</h1><div class="post-meta"><span class="post-time"><span class="post-meta-item-icon"><i class="fa fa-calendar-o"></i> </span><span class="post-meta-item-text">Posted on</span> <time title="Created: 2019-03-21 00:00:00" itemprop="dateCreated datePublished" datetime="2019-03-21T00:00:00+08:00">2019-03-21</time> </span><span class="post-category"><span class="post-meta-divider">|</span> <span class="post-meta-item-icon"><i class="fa fa-folder-o"></i> </span><span class="post-meta-item-text">In</span> <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Programming/" itemprop="url" rel="index"><span itemprop="name">Programming</span></a></span> , <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Programming/Data-Structure/" itemprop="url" rel="index"><span itemprop="name">Data Structure</span></a></span></span></div></header><div class="post-body" itemprop="articleBody"><p>阅读本文之前建议对LSM树有一定的认识。本文将介绍LSM Tree的主流实现，即LevelDB和RocksDB作为KV数据库。</p><p>两者对外提供的主要接口基本一致，就是包含以下5个基本操作</p><ul><li>get(K) 查找key K对应的value</li><li>put(K,V) 插入键值对（K，V）</li><li>update(K,V) 查找key K对应的value更新为V</li><li>delete(K) 删除key K对应的条目</li><li>scan(K1,K2) 得到从K1到K2的所有key和value</li></ul><p>我们将从静态和动态角度去介绍两个数据库<br>先从LevelDB开始，相对好理解。毕竟RocksDB是在levelDB上做的改进</p><h1 id="levelddb"><a class="markdownIt-Anchor" href="#levelddb"></a> LeveldDB</h1><p>接下从静态和动态角度去介绍</p><blockquote><p>静态视角：假想整个系统正在运行过程中（不断插入删除读取数据），此时我们给LevelDb照相，从照片可以看到之前系统的数据在内存和磁盘中是如何分布的，处于什么状态等.<br>动态视角：了解系统是如何写入一条记录，读出一条记录，删除一条记录的，同时也包括除了这些接口操作外的内部操作比如compaction，系统运行时崩溃后如何恢复系统等等方面。</p></blockquote><h2 id="架构-静态视角"><a class="markdownIt-Anchor" href="#架构-静态视角"></a> 架构 - 静态视角</h2><p><img src="/images/loading2.svg" alt data-original="/2019/03/21/Programming/Data Structure/LevelDB_RocksDB/leveldb_str.png"></p><h3 id="内存-对应lsm的c0"><a class="markdownIt-Anchor" href="#内存-对应lsm的c0"></a> 内存 （对应LSM的C0）</h3><ul><li><p>memtable</p><ul><li>结构：<strong>SKIPLIST</strong> ， 和immutable memtable 完全相同。</li><li>读写：允许读写</li><li>功能：当Memtable写入的数据占用内存到达指定数量，则自动转换为Immutable Memtable，等待Dump到磁盘中，系统会自动生成新的Memtable供写操作写入新数据</li><li>删除：并不存在真正的删除操作,删除某个Key的Value在Memtable内是作为插入一条记录实施的，但是会打上一个Key的删除标记，真正的删除操作是Lazy的，会在以后的Compaction过程中去掉这个KV</li><li>重启时：会从log中恢复。</li></ul></li><li><p>immutable memtable</p><ul><li>正在进行写入磁盘操作的memtable</li></ul></li></ul><h3 id="磁盘中"><a class="markdownIt-Anchor" href="#磁盘中"></a> 磁盘中</h3><ul><li><p>log(WAL)</p><ul><li>属于write-ahead-log，每个写入操作，都会往log尾部添加一个完整的kv记录</li><li>主作用是故障恢复，可以用于恢复memtable和immutable memtable</li></ul></li><li><p>current<br>current指出当前有效的那个manifest是哪个<br>随着Compaction进行，sstable变化，manifest会记录这些变化</p></li><li><p>manifest<br>记载sst各文件的信息(LEVEL, NAME, MIN_KEY, MAX_KEY)<br><img src="/images/loading2.svg" alt data-original="/2019/03/21/Programming/Data Structure/LevelDB_RocksDB/manifest.png"></p></li><li><p>SST文件（Semi-sort table） （<strong>对应LSM的C1-N</strong>）</p><ul><li>文件中key有序存储，存储一个范围(K1,K2)之间的键值对</li><li>Level 0的 SST之间可能存在key重叠 ， Level 1+ 的SST不会有key重叠</li><li>所有文件是一种层级结构，第一层为Level 0，第二层为Level 1，层级逐渐增高，每一层的容量也会增大，这也是称为LevelDB的原因。这level的设计上LevelDB和RocksDB完全一致。其大小关系往往是每个级别差10倍，如下图：<br><img src="/images/loading2.svg" alt data-original="/2019/03/21/Programming/Data Structure/LevelDB_RocksDB/rocksdb_level.png"></li></ul></li></ul><h3 id="sst文件-对应lsm的c1-n"><a class="markdownIt-Anchor" href="#sst文件-对应lsm的c1-n"></a> SST文件 (对应LSM的C1-N)</h3><h4 id="物理布局"><a class="markdownIt-Anchor" href="#物理布局"></a> 物理布局</h4><p><img src="/images/loading2.svg" alt data-original="/2019/03/21/Programming/Data Structure/LevelDB_RocksDB/leveldb_sst_phy.png"></p><h4 id="逻辑结构"><a class="markdownIt-Anchor" href="#逻辑结构"></a> 逻辑结构</h4><p><img src="/images/loading2.svg" alt data-original="/2019/03/21/Programming/Data Structure/LevelDB_RocksDB/leveldb_sst_logic.png"></p><h5 id="数据存储区"><a class="markdownIt-Anchor" href="#数据存储区"></a> 数据存储区</h5><p>存储实际的key-value，<strong>单个</strong>block里面内容如下<br><img src="/images/loading2.svg" alt data-original="/2019/03/21/Programming/Data Structure/LevelDB_RocksDB/LSM_data_block.png"></p><p>“重启点”（Restart Point）, 其实是一些指针，<strong>为了降低数据冗余</strong> 指出Block内容中的一些记录位置。在这条记录开始，不再采取只记载不同的Key部分，而是重新记录所有的Key值。<br><img src="/images/loading2.svg" alt data-original="/2019/03/21/Programming/Data Structure/LevelDB_RocksDB/leveldb_restart.png"></p><h5 id="数据管理区"><a class="markdownIt-Anchor" href="#数据管理区"></a> 数据管理区</h5><ul><li>meta block ：记录这个SST文件的一些元信息，比如record个数，数据大小等</li><li>footer ： 指向（索引）index block的index</li><li><strong>index block</strong>： 指向data block在文件中的地址，用于查找数据在哪个block内<br><img src="/images/loading2.svg" alt data-original="/2019/03/21/Programming/Data Structure/LevelDB_RocksDB/leveldb_index_block.png"></li></ul><h2 id="操作-动态视角"><a class="markdownIt-Anchor" href="#操作-动态视角"></a> 操作 - 动态视角</h2><h3 id="写-插入-更新-删除数据"><a class="markdownIt-Anchor" href="#写-插入-更新-删除数据"></a> 写 - 插入、 更新、删除数据</h3><ul><li>插入： 同步操作就是（决定延迟），就是先顺序写入log（内部无序），然后写入memtable。 异步写入后续就是要看compaction。</li><li>更新： 当做插入处理。</li><li>删除： 不是直接删除，而是加入了一个删除标记</li></ul><h4 id="compaction"><a class="markdownIt-Anchor" href="#compaction"></a> compaction</h4><p>目的： 完成数据的沉降，同时由于之前的插入、删除操作，数据有很多的冗余。压缩，然后删除掉一些不再有效的KV数据，减小数据规模，减少文件数。</p><h5 id="flush-memtable-level0"><a class="markdownIt-Anchor" href="#flush-memtable-level0"></a> flush (Memtable -&gt; LEVEL0)</h5><ul><li>触发条件： memtable大小超过阈值</li><li>结果： 其过程就是把immutable memtable简单持久化一个新sst</li><li>过程：依次写入sst，然后新建索引（所以一个level 0 sst数据大小和immutable memtable是一样的）</li><li>注意： 因为不考虑其他sst，所以level0的sst 键会存在会重叠</li></ul><h5 id="compaction-level-i-level-i1"><a class="markdownIt-Anchor" href="#compaction-level-i-level-i1"></a> compaction (Level i -&gt; Level i+1)</h5><p>就是按文件产生次序轮询，合并之后原文件就失效等待删除，新的文件生效（manifest记录）</p><ul><li>触发条件level i 大小或者文件个数超过阈值</li><li>过程: 以level i的一个文件为驱动，在 level i 找和level i+1 找存在key重叠的sst，然后滚动合并<ul><li>当i是0时，因为leveli文件之间存在重叠，所以是leveli和leveli+1的多个文件一起合并。</li><li>当i是1时，当因为leveli的sst之间没有重叠，所以就是一个leveli的文件和多个L+1合并</li></ul></li><li>结果图示(i&gt;=1情况)：<br><img src="/images/loading2.svg" alt data-original="/2019/03/21/Programming/Data Structure/LevelDB_RocksDB/compaction.png"></li><li>合并过程图示（即一个多路归并排序,图中L代表leveli的文件，L+1代表leveli+1的文件）：<br><img src="/images/loading2.svg" alt data-original="/2019/03/21/Programming/Data Structure/LevelDB_RocksDB/leveldb_merge.png"></li></ul><h4 id="读"><a class="markdownIt-Anchor" href="#读"></a> 读</h4><p>先内存后磁盘，硬盘从上层至下层。（找到数据就返回，因为level小的里面的记录肯定是最新的）<br>先在memtable里面找，如果找不到则从磁盘文件中，对于磁盘上的每一个level，查找有三级：</p><ol><li>sst定位：优先新鲜(level小的)sst， 唯一特殊的就是level 0不同sst可能会有key重叠，所以要在manifest中找到符合条件的文件，按<strong>从新到旧的顺序</strong>依次查找。</li><li>sst内查找： 先看sst的索引是否已经加载到Cache， 没有就加载，然后定位block</li><li>block内查找：先在restart points上找，然后restart points之间顺序查找</li></ol><h5 id="缓存-cache"><a class="markdownIt-Anchor" href="#缓存-cache"></a> 缓存 Cache</h5><p>为了加快查询，数据库都会将数据放入内存，来降低重复访问同一段数据带来的开销。<br>如：</p><ol><li>manifest内容存在缓存中</li><li>打开一个sst时，其索引块也会加载到缓存中</li><li>在一个block内查找时，也会将block加入到缓存</li></ol><h1 id="rocksdb"><a class="markdownIt-Anchor" href="#rocksdb"></a> RocksDB</h1><p>结构和levelDB大同小异，只是多了一些改进</p><ol><li>增加了column family，有了列簇的概念，可把一些相关的key存储在一起</li><li>内存中有多个immute memtalbe，可防止Leveldb中的 write stall</li><li>可支持多线程同时compation，理论上多线程同时comaption会比一个线程compation要快（TODO执行commpactiron的中心在哪）</li></ol><ol start="4"><li>支持TTL</li><li>flush与compation分开不同的线程池来调度，并具有不同的优先级，flush要优于compation，这样可以加快flush，防止stall</li><li>对SSD存储做了优化，可以以in-memory方式运行</li><li>增加了对 write ahead log（WAL）的管理机制，更方便管理WAL，WAL是binlog文件</li><li>支持多种不同的compaction策略</li></ol><h2 id="结构"><a class="markdownIt-Anchor" href="#结构"></a> 结构</h2><p><img src="/images/loading2.svg" alt data-original="/2019/03/21/Programming/Data Structure/LevelDB_RocksDB/rocksdb_str.png"></p><h1 id="特性"><a class="markdownIt-Anchor" href="#特性"></a> 特性</h1><p>同LSM Tree，唯一区别在于每一层分成了多个文件。</p><ul><li>优点：<ul><li>写延迟低</li><li>访问新数据更快，适合时序、实时存储</li></ul><ul><li>空间放大率低</li></ul></li><li>缺点：<ul><li>写放大、读放大高</li><li>读放大</li><li>磁盘上修改数据的粒度必须是文件</li></ul></li></ul></div><div><ul class="post-copyright"><li class="post-copyright-author"><strong>Post author: </strong>DaemondShu</li><li class="post-copyright-link"><strong>Post link: </strong><a href="http://daemondshu.github.io/2019/03/21/Programming/Data Structure/LevelDB_RocksDB/" title="LevelDB 和 RocksDB 结构详解">http://daemondshu.github.io/2019/03/21/Programming/Data Structure/LevelDB_RocksDB/</a></li><li class="post-copyright-license"><strong>Copyright Notice: </strong>All articles in this blog are licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fa fa-fw fa-creative-commons"></i>BY-NC-SA</a> unless stating additionally.</li></ul></div><footer class="post-footer"><div class="post-nav"><div class="post-nav-next post-nav-item"><a href="/2019/02/01/Programming/Data Structure/B_LSM_B-eplison_Tree/" rel="next" title="Data Structures for DB(External Disk)"><i class="fa fa-chevron-left"></i> Data Structures for DB(External Disk)</a></div><span class="post-nav-divider"></span><div class="post-nav-prev post-nav-item"><a href="/2019/04/20/System Design/Linux/OS_memAlloc/" rel="prev" title="Operating System | Memory allocation Alogrithm">Operating System | Memory allocation Alogrithm <i class="fa fa-chevron-right"></i></a></div></div></footer></div></article></div></div><div class="comments" id="gitalk-container"></div></div><div class="sidebar-toggle"><div class="sidebar-toggle-line-wrap"><span class="sidebar-toggle-line sidebar-toggle-line-first"></span> <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span> <span class="sidebar-toggle-line sidebar-toggle-line-last"></span></div></div><aside id="sidebar" class="sidebar"><div class="sidebar-inner"><ul class="sidebar-nav motion-element"><li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">Table of Contents</li><li class="sidebar-nav-overview" data-target="site-overview-wrap">Overview</li></ul><div class="site-overview-wrap sidebar-panel"><div class="site-overview"><div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person"><img class="site-author-image" itemprop="image" src="/images/user_256px.jpg" alt="DaemondShu"><p class="site-author-name" itemprop="name">DaemondShu</p><div class="site-description motion-element" itemprop="description"></div></div><nav class="site-state motion-element"><div class="site-state-item site-state-posts"><a href="/archives/"><span class="site-state-item-count">17</span> <span class="site-state-item-name">posts</span></a></div><div class="site-state-item site-state-categories"><a href="/categories/"><span class="site-state-item-count">11</span> <span class="site-state-item-name">categories</span></a></div></nav><div class="links-of-author motion-element"><span class="links-of-author-item"><a href="https://github.com/DaemondShu" title="GitHub &rarr; https://github.com/DaemondShu" rel="noopener" target="_blank"><i class="fa fa-fw fa-github"></i></a> </span><span class="links-of-author-item"><a href="/buqingShu@gmail.com" title="E-Mail &rarr; buqingShu@gmail.com"><i class="fa fa-fw fa-envelope"></i></a></span></div></div></div><div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active"><div class="post-toc"><div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#levelddb"><span class="nav-number">1.</span> <span class="nav-text">LeveldDB</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#架构-静态视角"><span class="nav-number">1.1.</span> <span class="nav-text">架构 - 静态视角</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#内存-对应lsm的c0"><span class="nav-number">1.1.1.</span> <span class="nav-text">内存 （对应LSM的C0）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#磁盘中"><span class="nav-number">1.1.2.</span> <span class="nav-text">磁盘中</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#sst文件-对应lsm的c1-n"><span class="nav-number">1.1.3.</span> <span class="nav-text">SST文件 (对应LSM的C1-N)</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#物理布局"><span class="nav-number">1.1.3.1.</span> <span class="nav-text">物理布局</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#逻辑结构"><span class="nav-number">1.1.3.2.</span> <span class="nav-text">逻辑结构</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#数据存储区"><span class="nav-number">1.1.3.2.1.</span> <span class="nav-text">数据存储区</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#数据管理区"><span class="nav-number">1.1.3.2.2.</span> <span class="nav-text">数据管理区</span></a></li></ol></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#操作-动态视角"><span class="nav-number">1.2.</span> <span class="nav-text">操作 - 动态视角</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#写-插入-更新-删除数据"><span class="nav-number">1.2.1.</span> <span class="nav-text">写 - 插入、 更新、删除数据</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#compaction"><span class="nav-number">1.2.1.1.</span> <span class="nav-text">compaction</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#flush-memtable-level0"><span class="nav-number">1.2.1.1.1.</span> <span class="nav-text">flush (Memtable -&gt; LEVEL0)</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#compaction-level-i-level-i1"><span class="nav-number">1.2.1.1.2.</span> <span class="nav-text">compaction (Level i -&gt; Level i+1)</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#读"><span class="nav-number">1.2.1.2.</span> <span class="nav-text">读</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#缓存-cache"><span class="nav-number">1.2.1.2.1.</span> <span class="nav-text">缓存 Cache</span></a></li></ol></li></ol></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#rocksdb"><span class="nav-number">2.</span> <span class="nav-text">RocksDB</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#结构"><span class="nav-number">2.1.</span> <span class="nav-text">结构</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#特性"><span class="nav-number">3.</span> <span class="nav-text">特性</span></a></li></ol></div></div></div><div class="back-to-top"><i class="fa fa-arrow-up"></i> <span id="scrollpercent"><span>0</span>%</span></div></div></aside></div></main><footer id="footer" class="footer"><div class="footer-inner"><div class="copyright">&copy; 2016 – <span itemprop="copyrightYear">2019</span> <span class="with-love" id="animate"><i class="fa fa-user"></i> </span><span class="author" itemprop="copyrightHolder">DaemondShu</span></div><div class="footer-custom">本小站主要用于高效地知识复习，按点描述，对初学者相对不太友好，见谅。对于想从头学习的朋友，可以参看底部Reference内容。</div></div></footer></div><script>"[object Function]"!==Object.prototype.toString.call(window.Promise)&&(window.Promise=null)</script><script src="//cdn.jsdelivr.net/npm/jquery@2/dist/jquery.min.js"></script><script src="//cdn.jsdelivr.net/npm/jquery-lazyload@1/jquery.lazyload.min.js"></script><script src="//cdn.jsdelivr.net/npm/velocity-animate@1/velocity.min.js"></script><script src="//cdn.jsdelivr.net/npm/velocity-animate@1/velocity.ui.min.js"></script><script src="/js/src/utils.js?v=7.0.1"></script><script src="/js/src/motion.js?v=7.0.1"></script><script src="/js/src/affix.js?v=7.0.1"></script><script src="/js/src/schemes/pisces.js?v=7.0.1"></script><script src="/js/src/scrollspy.js?v=7.0.1"></script><script src="/js/src/post-details.js?v=7.0.1"></script><script src="/js/src/next-boot.js?v=7.0.1"></script><script src="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script><link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css"><script src="//cdn.jsdelivr.net/npm/js-md5@0.7.3/src/md5.min.js"></script><script>var gitalk=new Gitalk({clientID:"f05fc119ddf3a4777e8d",clientSecret:"7f99ebc432c4141def31dbde420976cdd59d4e9f",repo:"BlogComment",owner:"DaemondShu",admin:["DaemondShu"],id:md5(location.pathname),language:window.navigator.language||window.navigator.userLanguage,distractionFreeMode:"true"});gitalk.render("gitalk-container")</script><script>// Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url).replace(/\/{2,}/g, '/');
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x"></i></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x"></i></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.1/dist/katex.min.css"></body></html>

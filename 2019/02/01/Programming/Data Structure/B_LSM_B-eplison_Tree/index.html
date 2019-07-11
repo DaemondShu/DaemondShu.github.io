@@ -1,0 +1,317 @@
+<!DOCTYPE html><html class="theme-next gemini use-motion" lang="zh"><head><meta name="generator" content="Hexo 3.8.0"><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=2"><meta name="theme-color" content="#222"><link rel="stylesheet" href="//cdn.jsdelivr.net/npm/font-awesome@4/css/font-awesome.min.css"><link rel="stylesheet" href="/css/main.css?v=7.0.1"><link rel="apple-touch-icon" sizes="180x180" href="/images/logo/apple-touch-icon.png?v=7.0.1"><link rel="icon" type="image/png" sizes="32x32" href="/images/logo/favicon-32x32.png?v=7.0.1"><link rel="icon" type="image/png" sizes="16x16" href="/images/logo/favicon-16x16.png?v=7.0.1"><link rel="mask-icon" href="/images/logo/safari-pinned-tab.svg?v=7.0.1" color="#222"><link rel="manifest" href="/images/logo/site.webmanifest"><meta name="msapplication-config" content="/images/logo/browserconfig.xml"><script id="hexo.configurations">var NexT=window.NexT||{},CONFIG={root:"/",scheme:"Gemini",version:"7.0.1",sidebar:{position:"left",display:"post",offset:12,onmobile:!1,dimmer:!1},back2top:!0,back2top_sidebar:!0,fancybox:!1,fastclick:!1,lazyload:!0,tabs:!0,motion:{enable:!0,async:!1,transition:{post_block:null,post_header:null,post_body:"slideDownIn",coll_header:"slideDownIn",sidebar:"flipXIn"}},algolia:{applicationID:"",apiKey:"",indexName:"",hits:{per_page:10},labels:{input_placeholder:"Search for Posts",hits_empty:"We didn't find any results for the search: ${query}",hits_stats:"${hits} results found in ${time} ms"}}}</script><meta name="description" content="本文将探讨当存储介质是外部存储，比如磁盘、闪存时，有哪些主流的存储数据结构(传统的二叉树将不再适用)。 本文以key-value数据库为例讲述不同数据结构的差异。 其KV存储包含以下5个基本操作  get(K) 查找key K对应的value put(K,V) 插入键值对（K，V） update(K,V) 查找key K对应的value更新为V delete(K) 删除key K对应的条目 sca"><meta property="og:type" content="article"><meta property="og:title" content="Data Structures for DB(External Disk)"><meta property="og:url" content="http://daemondshu.github.io/2019/02/01/Programming/Data Structure/B_LSM_B-eplison_Tree/index.html"><meta property="og:site_name" content="Daemon.D.Blog"><meta property="og:description" content="本文将探讨当存储介质是外部存储，比如磁盘、闪存时，有哪些主流的存储数据结构(传统的二叉树将不再适用)。 本文以key-value数据库为例讲述不同数据结构的差异。 其KV存储包含以下5个基本操作  get(K) 查找key K对应的value put(K,V) 插入键值对（K，V） update(K,V) 查找key K对应的value更新为V delete(K) 删除key K对应的条目 sca"><meta property="og:locale" content="zh"><meta property="og:image" content="http://daemondshu.github.io/images/loading2.svg"><meta property="og:image" content="http://daemondshu.github.io/images/loading2.svg"><meta property="og:image" content="http://daemondshu.github.io/images/loading2.svg"><meta property="og:image" content="http://daemondshu.github.io/images/loading2.svg"><meta property="og:image" content="http://daemondshu.github.io/images/loading2.svg"><meta property="og:image" content="http://daemondshu.github.io/images/loading2.svg"><meta property="og:image" content="http://daemondshu.github.io/images/loading2.svg"><meta property="og:image" content="http://daemondshu.github.io/images/loading2.svg"><meta property="og:image" content="http://daemondshu.github.io/images/loading2.svg"><meta property="og:image" content="http://daemondshu.github.io/images/loading2.svg"><meta property="og:image" content="http://daemondshu.github.io/images/loading2.svg"><meta property="og:image" content="http://daemondshu.github.io/images/loading2.svg"><meta property="og:image" content="http://daemondshu.github.io/images/loading2.svg"><meta property="og:image" content="http://daemondshu.github.io/images/loading2.svg"><meta property="og:image" content="http://daemondshu.github.io/images/loading2.svg"><meta property="og:image" content="http://daemondshu.github.io/images/loading2.svg"><meta property="og:image" content="http://daemondshu.github.io/images/loading2.svg"><meta property="og:image" content="http://daemondshu.github.io/images/loading2.svg"><meta property="og:image" content="http://daemondshu.github.io/images/loading2.svg"><meta property="og:image" content="http://daemondshu.github.io/images/loading2.svg"><meta property="og:image" content="http://daemondshu.github.io/images/loading2.svg"><meta property="og:updated_time" content="2019-07-11T17:52:35.745Z"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Data Structures for DB(External Disk)"><meta name="twitter:description" content="本文将探讨当存储介质是外部存储，比如磁盘、闪存时，有哪些主流的存储数据结构(传统的二叉树将不再适用)。 本文以key-value数据库为例讲述不同数据结构的差异。 其KV存储包含以下5个基本操作  get(K) 查找key K对应的value put(K,V) 插入键值对（K，V） update(K,V) 查找key K对应的value更新为V delete(K) 删除key K对应的条目 sca"><meta name="twitter:image" content="http://daemondshu.github.io/images/loading2.svg"><link rel="canonical" href="http://daemondshu.github.io/2019/02/01/Programming/Data Structure/B_LSM_B-eplison_Tree/"><script id="page.configurations">CONFIG.page={sidebar:""}</script><title>Data Structures for DB(External Disk) | Daemon.D.Blog</title><noscript><style>.sidebar-inner,.use-motion .brand,.use-motion .collection-title,.use-motion .comments,.use-motion .menu-item,.use-motion .motion-element,.use-motion .pagination,.use-motion .post-block,.use-motion .post-body,.use-motion .post-header{opacity:initial}.use-motion .logo,.use-motion .site-subtitle,.use-motion .site-title{opacity:initial;top:initial}.use-motion .logo-line-before i{left:initial}.use-motion .logo-line-after i{right:initial}</style></noscript></head><body itemscope itemtype="http://schema.org/WebPage" lang="zh"><div class="container sidebar-position-left page-post-detail"><div class="headband"></div><header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="header-inner"><div class="site-brand-wrapper"><div class="site-meta"><div class="custom-logo-site-title"><a href="/" class="brand" rel="start"><span class="logo-line-before"><i></i></span> <span class="site-title">Daemon.D.Blog</span> <span class="logo-line-after"><i></i></span></a></div></div><div class="site-nav-toggle"><button aria-label="Toggle navigation bar"><span class="btn-bar"></span> <span class="btn-bar"></span> <span class="btn-bar"></span></button></div></div><nav class="site-nav"><ul id="menu" class="menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i><br>Home</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i><br>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i><br>Archives</a></li><li class="menu-item menu-item-search"><a href="javascript:;" class="popup-trigger"><i class="menu-item-icon fa fa-search fa-fw"></i><br>Search</a></li></ul><div class="site-search"><div class="popup search-popup local-search-popup"><div class="local-search-header clearfix"><span class="search-icon"><i class="fa fa-search"></i> </span><span class="popup-btn-close"><i class="fa fa-times-circle"></i></span><div class="local-search-input-wrapper"><input autocomplete="off" placeholder="Searching..." spellcheck="false" type="text" id="local-search-input"></div></div><div id="local-search-result"></div></div></div></nav></div></header><main id="main" class="main"><div class="main-inner"><div class="content-wrap"><div id="content" class="content"><div id="posts" class="posts-expand"><article class="post post-type-normal" itemscope itemtype="http://schema.org/Article"><div class="post-block"><link itemprop="mainEntityOfPage" href="http://daemondshu.github.io/2019/02/01/Programming/Data Structure/B_LSM_B-eplison_Tree/"><span hidden itemprop="author" itemscope itemtype="http://schema.org/Person"><meta itemprop="name" content="DaemondShu"><meta itemprop="description" content><meta itemprop="image" content="/images/user_256px.jpg"></span><span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization"><meta itemprop="name" content="Daemon.D.Blog"></span><header class="post-header"><h1 class="post-title" itemprop="name headline">Data Structures for DB(External Disk)</h1><div class="post-meta"><span class="post-time"><span class="post-meta-item-icon"><i class="fa fa-calendar-o"></i> </span><span class="post-meta-item-text">Posted on</span> <time title="Created: 2019-02-01 00:00:00" itemprop="dateCreated datePublished" datetime="2019-02-01T00:00:00+08:00">2019-02-01</time> </span><span class="post-category"><span class="post-meta-divider">|</span> <span class="post-meta-item-icon"><i class="fa fa-folder-o"></i> </span><span class="post-meta-item-text">In</span> <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Programming/" itemprop="url" rel="index"><span itemprop="name">Programming</span></a></span> , <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Programming/Data-Structure/" itemprop="url" rel="index"><span itemprop="name">Data Structure</span></a></span></span></div></header><div class="post-body" itemprop="articleBody"><p>本文将探讨当存储介质是外部存储，比如磁盘、闪存时，有哪些主流的存储数据结构(传统的二叉树将不再适用)。 本文以key-value数据库为例讲述不同数据结构的差异。<br>其KV存储包含以下5个基本操作</p><ul><li>get(K) 查找key K对应的value</li><li>put(K,V) 插入键值对（K，V）</li><li>update(K,V) 查找key K对应的value更新为V</li><li>delete(K) 删除key K对应的条目</li><li>scan(K1,K2) 得到从K1到K2的所有key和value</li></ul><h1 id="b-系列"><a class="markdownIt-Anchor" href="#b-系列"></a> B 系列</h1><h2 id="b-b-tree"><a class="markdownIt-Anchor" href="#b-b-tree"></a> B ( B- ) Tree</h2><p>B树也称B-树,它是一颗多路平衡查找树。我们描述一颗B树时需要指定它的阶数，阶数表示了一个结点最多有多少个孩子结点，一般用字母m表示阶数。当m取2时，就是我们常见的二叉搜索树。</p><h3 id="结构图示"><a class="markdownIt-Anchor" href="#结构图示"></a> 结构图示</h3><p>以一颗阶数为4的为例，图中数字对应key，data对应value<br><img src="/images/loading2.svg" alt data-original="/2019/02/01/Programming/Data Structure/B_LSM_B-eplison_Tree/B_structure.png"></p><h3 id="定义"><a class="markdownIt-Anchor" href="#定义"></a> 定义</h3><ol><li>每个结点最多有m-1个key。</li><li>根结点最少可以只有1个key。</li><li>非根结点至少有<span class="katex"><span class="katex-mathml"><math><semantics><mrow><mo>⌈</mo><mi>m</mi><mi mathvariant="normal">/</mi><mn>2</mn><mo>⌉</mo><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">⌈m/2⌉-1</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-.25em"></span><span class="mopen">⌈</span><span class="mord mathdefault">m</span><span class="mord">/</span><span class="mord">2</span><span class="mclose">⌉</span><span class="mspace" style="margin-right:.2222222222222222em"></span><span class="mbin">−</span><span class="mspace" style="margin-right:.2222222222222222em"></span></span><span class="base"><span class="strut" style="height:.64444em;vertical-align:0"></span><span class="mord">1</span></span></span></span>个key。（最差节点利用率为50%）</li><li>每个结点中的关键字都按照顺序排列，每个关键字的左子树中的所有关键字都小于它，而右子树中的所有关键字都大于它。</li><li>所有叶子结点都位于同一层，或者说根结点到每个叶子结点的长度都相同。</li><li>设某个节点含有n个元素，则<ul><li>如果是叶子节点，该节点含有n个value</li><li>如果是非叶子节点，该节点不仅含有n个value，还存有n+1个子节点的地址（边）</li></ul></li></ol><h3 id="查找"><a class="markdownIt-Anchor" href="#查找"></a> 查找</h3><p>即根据一个key，得到对应的value(data)，也可能找不到。</p><h4 id="过程"><a class="markdownIt-Anchor" href="#过程"></a> 过程</h4><p>其步骤如下：</p><ol><li>从根节点开始</li><li>在当前节点内通过二分查找定位到一个最小且&gt;=key的key</li><li>如果key已经命中（相等），则返回该key的值。 如果没有命中，则加载新的子节点，返回第二步继续查找（如果已经是叶子节点，就可以返回不存在）。</li></ol><h4 id="复杂度"><a class="markdownIt-Anchor" href="#复杂度"></a> 复杂度</h4><p>整个过程时间复杂度是 O(logMlogN),</p><ul><li>M是阶数， logM对应在节点内做二分查找</li><li>N是元素个数， logN对应加载节点的次数，即树的深度</li></ul><h3 id="更新"><a class="markdownIt-Anchor" href="#更新"></a> 更新</h3><p>另外更新就是先查找，然后修改value。就不做多的赘述了。不会修改树的结构，但是可能会导致节点地址改动（比如当将一个很小的value替换成一个很大的value，原始节点的物理空间不够，就需要重新将这个节点写入其他地方）。</p><h3 id="插入"><a class="markdownIt-Anchor" href="#插入"></a> 插入</h3><p>插入就是查找定位到节点后，在指定位置插入。比较复杂的部分是当节点存在节点满了之后就需要分裂。</p><p>最开始插入会先插入到叶子节点。若满则以中值为划分分裂成两个，同时将中值加入到父节点中。如果父节点又满，则进行相同操作。直到分裂向上的节点中没有满。</p><h4 id="图示"><a class="markdownIt-Anchor" href="#图示"></a> 图示</h4><p>我们以图例来理解这个过程，</p><ol><li>初始： 存在一棵M为5的树,即最大元素个数是4。<br><img src="/images/loading2.svg" alt data-original="/2019/02/01/Programming/Data Structure/B_LSM_B-eplison_Tree/B_insert.png"></li><li>插入成功，但是导致一个叶子节点满<br><img src="/images/loading2.svg" alt data-original="/2019/02/01/Programming/Data Structure/B_LSM_B-eplison_Tree/B_insert_2.png"></li><li>按中值(27)分裂，并将中值插入到父亲节点<br><img src="/images/loading2.svg" alt data-original="/2019/02/01/Programming/Data Structure/B_LSM_B-eplison_Tree/B_insert_3.png"></li><li>因为父亲节点满，继续分裂。因为是根节点，所以向上过程直接添加一个新的根节点。整个插入结束。<br><img src="/images/loading2.svg" alt data-original="/2019/02/01/Programming/Data Structure/B_LSM_B-eplison_Tree/b_insert_4.png"></li></ol><h3 id="删除"><a class="markdownIt-Anchor" href="#删除"></a> 删除</h3><p>删除过程相对复杂。 但是其基本原则是，当节点删除一个元素时，<br>优先从子节点找后继替代自己，如果做不到，就从兄弟节点找（完成一个兄弟到父亲，父亲到自己的转移。若兄弟也做不到，则和兄弟进行合并。（因为此时两个字节点个数都是<span class="katex"><span class="katex-mathml"><math><semantics><mrow><mo>⌈</mo><mi>m</mi><mi mathvariant="normal">/</mi><mn>2</mn><mo>⌉</mo><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">⌈m/2⌉-1</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-.25em"></span><span class="mopen">⌈</span><span class="mord mathdefault">m</span><span class="mord">/</span><span class="mord">2</span><span class="mclose">⌉</span><span class="mspace" style="margin-right:.2222222222222222em"></span><span class="mbin">−</span><span class="mspace" style="margin-right:.2222222222222222em"></span></span><span class="base"><span class="strut" style="height:.64444em;vertical-align:0"></span><span class="mord">1</span></span></span></span>）</p><h4 id="不同情况图示"><a class="markdownIt-Anchor" href="#不同情况图示"></a> 不同情况图示</h4><ol><li>初始，阶数为5，即一个节点最少2个元素<br><img src="/images/loading2.svg" alt data-original="/2019/02/01/Programming/Data Structure/B_LSM_B-eplison_Tree/b_delete_0.png"></li><li>删除21，正常删除，因为删除后节点个数仍然&gt;2<br><img src="/images/loading2.svg" alt data-original="/2019/02/01/Programming/Data Structure/B_LSM_B-eplison_Tree/b_delete2.png"></li><li>删除27，在非叶子节点,从子节点替换，<ol><li>这里默认优先从右子节点替换<br><img src="/images/loading2.svg" alt data-original="/2019/02/01/Programming/Data Structure/B_LSM_B-eplison_Tree/b_delete_3.png"></li><li>但是子节点不够，就需要从兄弟节点移动过来。<br><img src="/images/loading2.svg" alt data-original="/2019/02/01/Programming/Data Structure/B_LSM_B-eplison_Tree/b_delete_4.png"></li></ol></li><li>删除32</li><li>叶子节点个数不够，但是兄弟节点也无法转移<br><img src="/images/loading2.svg" alt data-original="/2019/02/01/Programming/Data Structure/B_LSM_B-eplison_Tree/b_delete_5.png"></li><li>合并两个兄弟节点元素和兄弟之间的元素<br><img src="/images/loading2.svg" alt data-original="/2019/02/01/Programming/Data Structure/B_LSM_B-eplison_Tree/b_delete_6.png"></li></ol><h2 id="b-tree"><a class="markdownIt-Anchor" href="#b-tree"></a> B+ Tree</h2><p>相比于b树，区别在于</p><ol><li>非叶子节点是索引节点，只存储部分key和子节点地址，不存储value</li><li>所有key和value都会存储在叶子节点中</li><li>叶子节点之间存在顺序指向</li></ol><p>查找和更新和B树类似，就不提了。插入和删除思想一致，但是略有差别。</p><h3 id="结构图示-2"><a class="markdownIt-Anchor" href="#结构图示-2"></a> 结构图示</h3><p><img src="/images/loading2.svg" alt data-original="/2019/02/01/Programming/Data Structure/B_LSM_B-eplison_Tree/b+_structure.png"></p><h3 id="插入-2"><a class="markdownIt-Anchor" href="#插入-2"></a> 插入</h3><p>插入思想不变。即数据插入到叶子节点，如果满，则分裂，将中值插入到父亲节点，直至某个节点不满。</p><ol><li>如初始<br><img src="/images/loading2.svg" alt data-original="/2019/02/01/Programming/Data Structure/B_LSM_B-eplison_Tree/B+_insert_0.png"></li><li>插入18,叶子满，分裂，中值插入到父亲节点<br><img src="/images/loading2.svg" alt data-original="/2019/02/01/Programming/Data Structure/B_LSM_B-eplison_Tree/b+_insert_1.png"><br><img src="/images/loading2.svg" alt data-original="/2019/02/01/Programming/Data Structure/B_LSM_B-eplison_Tree/b+_insert_2.png"></li></ol><h3 id="删除-2"><a class="markdownIt-Anchor" href="#删除-2"></a> 删除</h3><p>必须删除叶子节点上的元素，同时更新索引节点上的。由于父亲节点不存在记录，所以都是从从兄弟之间转移。 当无法转移的时候合并节点。</p><ol><li>如初始<br><img src="/images/loading2.svg" alt data-original="/2019/02/01/Programming/Data Structure/B_LSM_B-eplison_Tree/B+_delete0.png"></li><li>删除7<ol><li>删除后发现不足，但是兄弟节点也无法转移<br><img src="/images/loading2.svg" alt data-original="/2019/02/01/Programming/Data Structure/B_LSM_B-eplison_Tree/B+_delete01.png"></li><li>叶子合并<br><img src="/images/loading2.svg" alt data-original="/2019/02/01/Programming/Data Structure/B_LSM_B-eplison_Tree/b+_delete1.png"></li><li>索引节点合并<br><img src="/images/loading2.svg" alt data-original="/2019/02/01/Programming/Data Structure/B_LSM_B-eplison_Tree/B+_delete2.png"></li></ol></li></ol><h2 id="特性"><a class="markdownIt-Anchor" href="#特性"></a> 特性</h2><h3 id="优点"><a class="markdownIt-Anchor" href="#优点"></a> 优点</h3><ul><li>快速查找</li><li>B+：<ul><li>对scan(range query，范围扫描 顺序访问)更加友好</li><li>索引节点内单个页存储元素个数可以更多，降低树的深度，尤其适合value较大的场景</li></ul></li><li>B： 查找更加快（不需要每次访问到子节点）</li><li>value热更新开销小</li></ul><h3 id="缺点"><a class="markdownIt-Anchor" href="#缺点"></a> 缺点</h3><ul><li>插入操作慢，写</li><li>空间放大率高（空间利用率不高）， 数据结构变更容易产生文件空洞</li><li>不同节点随机存储在磁盘上，会产生大量的随机IO。</li></ul><h1 id="lsm-tree"><a class="markdownIt-Anchor" href="#lsm-tree"></a> LSM Tree</h1><p>将日志文件系统与树形数据结构结合适用的形式，提出一种延迟更新、批量写入硬盘的LSM-tree及其算法，</p><h2 id="结构"><a class="markdownIt-Anchor" href="#结构"></a> 结构</h2><ul><li>C0树（常驻内存）</li><li>C1-N 树(位于磁盘)<br><img src="/images/loading2.svg" alt data-original="/2019/02/01/Programming/Data Structure/B_LSM_B-eplison_Tree/lsm_tree_structure.png"></li></ul><h2 id="插入-更新-删除"><a class="markdownIt-Anchor" href="#插入-更新-删除"></a> 插入、更新、删除</h2><p>就是将新的键值对放入C0即算插入完成，通过compaction操作去异步维护C0-N之间的关系。</p><ol><li>待C0存储的内容大于一个阈值，就会将内容全部合并到C1中，然后清空C0</li><li>对于C1-N也同理，任何一个Ci查过其阈值后，就讲内容合并到Ci+1</li></ol><h2 id="查找-2"><a class="markdownIt-Anchor" href="#查找-2"></a> 查找</h2><p>由于compaction导致同一个key可能存在多层中，但是越上层的数据越新。<br>所以查找则变成从上至下的查询。过程如下</p><ol><li><code>i = 0</code> (从C0开始)</li><li>如果在Ci中找到了K，则返回value，否则<code>i++</code>然后回到第1步，</li></ol><h2 id="特性-2"><a class="markdownIt-Anchor" href="#特性-2"></a> 特性</h2><h3 id="优点-2"><a class="markdownIt-Anchor" href="#优点-2"></a> 优点</h3><ul><li>大幅度提高插入（修改、删除）性能</li><li>空间放大率降低</li><li>访问新数据更快，适合时序、实时存储</li><li>数据热度分布和level相关</li></ul><h3 id="缺点-2"><a class="markdownIt-Anchor" href="#缺点-2"></a> 缺点</h3><ul><li>牺牲了读性能（一次可能访问多个层）</li><li>读、写放大率提升</li></ul><h2 id="具体实现"><a class="markdownIt-Anchor" href="#具体实现"></a> 具体实现</h2><p>LSM Tree对于C树的具体实现很多，理论上Ci树可以是任何允许索引的结构，比如B、hash、二叉树等结构，但是目前业界主流实现可以参考LevelDB和RocksDB。</p><h1 id="bepsilonε-tree-fractal-tree"><a class="markdownIt-Anchor" href="#bepsilonε-tree-fractal-tree"></a> Bepsilon(ε) Tree / Fractal Tree</h1><p>一个针对B树做写优化的结构。 可以看做是LSM树和B树的结合</p><h2 id="对应系统"><a class="markdownIt-Anchor" href="#对应系统"></a> 对应系统</h2><p>被TokuDB 和 the BetrFS 采用。<br>为了防止歧义，我也将论文中的原文粘贴在引用中。</p><h2 id="结构-2"><a class="markdownIt-Anchor" href="#结构-2"></a> 结构</h2><ul><li>每个node内置一个buffer，这个buffer是持久化存储的。</li><li>一个节点的大小为B， 那么存储原始数据的pivots部分大小为<code>Bε</code>和buffer部分大小为<code>B-Bε</code>, ε是0-1之间的一个数<br><img src="/images/loading2.svg" alt data-original="/2019/02/01/Programming/Data Structure/B_LSM_B-eplison_Tree/Be_structure.png"></li></ul><blockquote><p>The distinguishing feature of a Bε-tree is that in- ternal nodes also allocate some space for a buffer, as shown in Figure 1. The buffer in each internal node is used to store messages, which encode updates that will eventually be applied to leaves under this node. This buffer is not an in-memory data structure; it is part of the node and is written to disk, evicted from memory, etc., whenever the node is. The value of ε, which must be between 0 and 1, is a tuning parameter that selects how much space internal nodes use for pivots (≈ Bε) and how much space is used as a buffer (≈ B − Bε).</p></blockquote><h2 id="写操作-插入和删除"><a class="markdownIt-Anchor" href="#写操作-插入和删除"></a> 写操作 （插入和删除）</h2><ol><li>每个写操作和删除操作都会编码成<code>message</code>，每个buffer中的message会以二叉搜索树的方式组织（比如红黑树），</li><li>每次都是先写入root node的buffer</li><li>当一个节点的buffer满时，消息将会批量地写给一个子节点</li><li>最终buffer会传递到叶子节点，当叶子节点buffer满时，将改动应用到叶子节点，然后分裂或者合并node的过程就跟B树一样了</li></ol><blockquote><p>Insertions are encoded as “insert messages”, addressed to a particular key, and added to the buffer of the root node of the tree. When enough messages have been added to a node to fill the node’s buffer, a batch of messages are flushed to one of the node’s children. Generally, the child with the most pending messages is selected. Over the course of flushing, each message is ultimately delivered to the appropriate leaf node, and the new key and value are added to the leaf. When a leaf node becomes too full, it splits, just as in a B-tree. Similar to a B-tree, when an interior node gets too many children, it splits and the messages in its buffer are distributed between the two new nodes.</p></blockquote><h2 id="查询"><a class="markdownIt-Anchor" href="#查询"></a> 查询</h2><p>从root到leaf先查询buffer，<br>buffer中没有再去leafnode里查看。 查询路径和B树相同。</p><h2 id="reference"><a class="markdownIt-Anchor" href="#reference"></a> Reference</h2><ul><li><a href="https://www.cnblogs.com/nullzx/p/8729425.html" target="_blank" rel="noopener">B树和B+树的插入、删除图文详解</a></li><li><a href="https://www.cnblogs.com/siegfang/archive/2013/01/12/lsm-tree.html" target="_blank" rel="noopener">日志结构的合并树 The Log-Structured Merge-Tree</a></li><li><a href="https://cloud.tencent.com/developer/news/340271" target="_blank" rel="noopener">LSM-tree 基本原理及应用</a></li><li><a href="https://akumuli.org/akumuli/2017/08/01/storage-engine-design2/" target="_blank" rel="noopener">Storage engine design(Part2)</a></li><li><a href="http://www3.cs.stonybrook.edu/~rob/papers/login15.pdf" target="_blank" rel="noopener">An Introduction to Bε trees and Write-Optimization</a></li><li><a href="http://kernelmaker.github.io/Btree_LSM_FTI" target="_blank" rel="noopener">B+ Tree、LSM、Fractal tree index 读写放大分析</a></li><li><a href="http://blog.omega-prime.co.uk/2016/07/05/datastructures-for-external-memory/" target="_blank" rel="noopener">Data structures for external memory</a></li><li><a href="https://www.open-open.com/lib/view/open1420338434078.html" target="_blank" rel="noopener">IndexFS: Scaling File System Metadata Performance</a></li><li><a href="http://openinx.github.io/2015/11/25/ft-index-implement/" target="_blank" rel="noopener">TokuDB的索引结构–分形树的实现</a></li><li><a href="http://mysql.taobao.org/monthly/2017/07/04/" target="_blank" rel="noopener">TokuDB · 引擎特性 · HybridDB for MySQL高压缩引擎TokuDB 揭秘</a></li><li><a href="https://www.biaodianfu.com/tokudb.html" target="_blank" rel="noopener">MySQL 高性能存储引擎：TokuDB初探</a></li></ul></div><div><ul class="post-copyright"><li class="post-copyright-author"><strong>Post author: </strong>DaemondShu</li><li class="post-copyright-link"><strong>Post link: </strong><a href="http://daemondshu.github.io/2019/02/01/Programming/Data Structure/B_LSM_B-eplison_Tree/" title="Data Structures for DB(External Disk)">http://daemondshu.github.io/2019/02/01/Programming/Data Structure/B_LSM_B-eplison_Tree/</a></li><li class="post-copyright-license"><strong>Copyright Notice: </strong>All articles in this blog are licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fa fa-fw fa-creative-commons"></i>BY-NC-SA</a> unless stating additionally.</li></ul></div><footer class="post-footer"><div class="post-nav"><div class="post-nav-next post-nav-item"><a href="/2019/01/20/System Design/Linux/OS_basic/" rel="next" title="OS Basic"><i class="fa fa-chevron-left"></i> OS Basic</a></div><span class="post-nav-divider"></span><div class="post-nav-prev post-nav-item"><a href="/2019/03/21/Programming/Data Structure/LevelDB_RocksDB/" rel="prev" title="LevelDB 和 RocksDB 结构详解">LevelDB 和 RocksDB 结构详解 <i class="fa fa-chevron-right"></i></a></div></div></footer></div></article></div></div><div class="comments" id="gitalk-container"></div></div><div class="sidebar-toggle"><div class="sidebar-toggle-line-wrap"><span class="sidebar-toggle-line sidebar-toggle-line-first"></span> <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span> <span class="sidebar-toggle-line sidebar-toggle-line-last"></span></div></div><aside id="sidebar" class="sidebar"><div class="sidebar-inner"><ul class="sidebar-nav motion-element"><li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">Table of Contents</li><li class="sidebar-nav-overview" data-target="site-overview-wrap">Overview</li></ul><div class="site-overview-wrap sidebar-panel"><div class="site-overview"><div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person"><img class="site-author-image" itemprop="image" src="/images/user_256px.jpg" alt="DaemondShu"><p class="site-author-name" itemprop="name">DaemondShu</p><div class="site-description motion-element" itemprop="description"></div></div><nav class="site-state motion-element"><div class="site-state-item site-state-posts"><a href="/archives/"><span class="site-state-item-count">17</span> <span class="site-state-item-name">posts</span></a></div><div class="site-state-item site-state-categories"><a href="/categories/"><span class="site-state-item-count">11</span> <span class="site-state-item-name">categories</span></a></div></nav><div class="links-of-author motion-element"><span class="links-of-author-item"><a href="https://github.com/DaemondShu" title="GitHub &rarr; https://github.com/DaemondShu" rel="noopener" target="_blank"><i class="fa fa-fw fa-github"></i></a> </span><span class="links-of-author-item"><a href="/buqingShu@gmail.com" title="E-Mail &rarr; buqingShu@gmail.com"><i class="fa fa-fw fa-envelope"></i></a></span></div></div></div><div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active"><div class="post-toc"><div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#b-系列"><span class="nav-number">1.</span> <span class="nav-text">B 系列</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#b-b-tree"><span class="nav-number">1.1.</span> <span class="nav-text">B ( B- ) Tree</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#结构图示"><span class="nav-number">1.1.1.</span> <span class="nav-text">结构图示</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#定义"><span class="nav-number">1.1.2.</span> <span class="nav-text">定义</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#查找"><span class="nav-number">1.1.3.</span> <span class="nav-text">查找</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#过程"><span class="nav-number">1.1.3.1.</span> <span class="nav-text">过程</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#复杂度"><span class="nav-number">1.1.3.2.</span> <span class="nav-text">复杂度</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#更新"><span class="nav-number">1.1.4.</span> <span class="nav-text">更新</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#插入"><span class="nav-number">1.1.5.</span> <span class="nav-text">插入</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#图示"><span class="nav-number">1.1.5.1.</span> <span class="nav-text">图示</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#删除"><span class="nav-number">1.1.6.</span> <span class="nav-text">删除</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#不同情况图示"><span class="nav-number">1.1.6.1.</span> <span class="nav-text">不同情况图示</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#b-tree"><span class="nav-number">1.2.</span> <span class="nav-text">B+ Tree</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#结构图示-2"><span class="nav-number">1.2.1.</span> <span class="nav-text">结构图示</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#插入-2"><span class="nav-number">1.2.2.</span> <span class="nav-text">插入</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#删除-2"><span class="nav-number">1.2.3.</span> <span class="nav-text">删除</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#特性"><span class="nav-number">1.3.</span> <span class="nav-text">特性</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#优点"><span class="nav-number">1.3.1.</span> <span class="nav-text">优点</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#缺点"><span class="nav-number">1.3.2.</span> <span class="nav-text">缺点</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#lsm-tree"><span class="nav-number">2.</span> <span class="nav-text">LSM Tree</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#结构"><span class="nav-number">2.1.</span> <span class="nav-text">结构</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#插入-更新-删除"><span class="nav-number">2.2.</span> <span class="nav-text">插入、更新、删除</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#查找-2"><span class="nav-number">2.3.</span> <span class="nav-text">查找</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#特性-2"><span class="nav-number">2.4.</span> <span class="nav-text">特性</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#优点-2"><span class="nav-number">2.4.1.</span> <span class="nav-text">优点</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#缺点-2"><span class="nav-number">2.4.2.</span> <span class="nav-text">缺点</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#具体实现"><span class="nav-number">2.5.</span> <span class="nav-text">具体实现</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#bepsilonε-tree-fractal-tree"><span class="nav-number">3.</span> <span class="nav-text">Bepsilon(ε) Tree / Fractal Tree</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#对应系统"><span class="nav-number">3.1.</span> <span class="nav-text">对应系统</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#结构-2"><span class="nav-number">3.2.</span> <span class="nav-text">结构</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#写操作-插入和删除"><span class="nav-number">3.3.</span> <span class="nav-text">写操作 （插入和删除）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#查询"><span class="nav-number">3.4.</span> <span class="nav-text">查询</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#reference"><span class="nav-number">3.5.</span> <span class="nav-text">Reference</span></a></li></ol></li></ol></div></div></div><div class="back-to-top"><i class="fa fa-arrow-up"></i> <span id="scrollpercent"><span>0</span>%</span></div></div></aside></div></main><footer id="footer" class="footer"><div class="footer-inner"><div class="copyright">&copy; 2016 – <span itemprop="copyrightYear">2019</span> <span class="with-love" id="animate"><i class="fa fa-user"></i> </span><span class="author" itemprop="copyrightHolder">DaemondShu</span></div><div class="footer-custom">本小站主要用于高效地知识复习，按点描述，对初学者相对不太友好，见谅。对于想从头学习的朋友，可以参看底部Reference内容。</div></div></footer></div><script>"[object Function]"!==Object.prototype.toString.call(window.Promise)&&(window.Promise=null)</script><script src="//cdn.jsdelivr.net/npm/jquery@2/dist/jquery.min.js"></script><script src="//cdn.jsdelivr.net/npm/jquery-lazyload@1/jquery.lazyload.min.js"></script><script src="//cdn.jsdelivr.net/npm/velocity-animate@1/velocity.min.js"></script><script src="//cdn.jsdelivr.net/npm/velocity-animate@1/velocity.ui.min.js"></script><script src="/js/src/utils.js?v=7.0.1"></script><script src="/js/src/motion.js?v=7.0.1"></script><script src="/js/src/affix.js?v=7.0.1"></script><script src="/js/src/schemes/pisces.js?v=7.0.1"></script><script src="/js/src/scrollspy.js?v=7.0.1"></script><script src="/js/src/post-details.js?v=7.0.1"></script><script src="/js/src/next-boot.js?v=7.0.1"></script><script src="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script><link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css"><script src="//cdn.jsdelivr.net/npm/js-md5@0.7.3/src/md5.min.js"></script><script>var gitalk=new Gitalk({clientID:"f05fc119ddf3a4777e8d",clientSecret:"7f99ebc432c4141def31dbde420976cdd59d4e9f",repo:"BlogComment",owner:"DaemondShu",admin:["DaemondShu"],id:md5(location.pathname),language:window.navigator.language||window.navigator.userLanguage,distractionFreeMode:"true"});gitalk.render("gitalk-container")</script><script>// Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url).replace(/\/{2,}/g, '/');
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x"></i></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x"></i></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.1/dist/katex.min.css"></body></html>
