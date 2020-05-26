@@ -1,0 +1,317 @@
+<!DOCTYPE html><html class="theme-next gemini use-motion" lang="zh"><head><meta name="generator" content="Hexo 3.8.0"><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=2"><meta name="theme-color" content="#222"><link rel="stylesheet" href="//cdn.jsdelivr.net/npm/font-awesome@4/css/font-awesome.min.css"><link rel="stylesheet" href="/css/main.css?v=7.0.1"><link rel="apple-touch-icon" sizes="180x180" href="/images/logo/apple-touch-icon.png?v=7.0.1"><link rel="icon" type="image/png" sizes="32x32" href="/images/logo/favicon-32x32.png?v=7.0.1"><link rel="icon" type="image/png" sizes="16x16" href="/images/logo/favicon-16x16.png?v=7.0.1"><link rel="mask-icon" href="/images/logo/safari-pinned-tab.svg?v=7.0.1" color="#222"><link rel="manifest" href="/images/logo/site.webmanifest"><meta name="msapplication-config" content="/images/logo/browserconfig.xml"><script id="hexo.configurations">var NexT=window.NexT||{},CONFIG={root:"/",scheme:"Gemini",version:"7.0.1",sidebar:{position:"left",display:"post",offset:12,onmobile:!1,dimmer:!1},back2top:!0,back2top_sidebar:!0,fancybox:!1,fastclick:!1,lazyload:!0,tabs:!0,motion:{enable:!0,async:!1,transition:{post_block:null,post_header:null,post_body:"slideDownIn",coll_header:"slideDownIn",sidebar:"flipXIn"}},algolia:{applicationID:"",apiKey:"",indexName:"",hits:{per_page:10},labels:{input_placeholder:"Search for Posts",hits_empty:"We didn't find any results for the search: ${query}",hits_stats:"${hits} results found in ${time} ms"}}}</script><meta name="description" content="加密算法简述 所谓加密算法就是指将信息变成密文的计算方法。 可以很简单也可以很复杂。有的加密算法就是对信息进行简单的替换和乱序， 这种加密算法最明显的缺陷就是算法本身必须保证是保密的。 现代加密算法通常需要密匙来完成对信息的加密运算， 算法本身是可以公开的，只要保证密匙的安全就能保存信息的安全。 基于密匙的加密算法可以分为两大类:  对称加密算法： 加密数据和解密数据都是用的同一个密匙。缺点是密"><meta property="og:type" content="article"><meta property="og:title" content="非对称加密之PKI体系"><meta property="og:url" content="http://daemondshu.github.io/2020/03/10/System Design/Network/RSA_PKI_encrypt/index.html"><meta property="og:site_name" content="Daemon.D.Blog"><meta property="og:description" content="加密算法简述 所谓加密算法就是指将信息变成密文的计算方法。 可以很简单也可以很复杂。有的加密算法就是对信息进行简单的替换和乱序， 这种加密算法最明显的缺陷就是算法本身必须保证是保密的。 现代加密算法通常需要密匙来完成对信息的加密运算， 算法本身是可以公开的，只要保证密匙的安全就能保存信息的安全。 基于密匙的加密算法可以分为两大类:  对称加密算法： 加密数据和解密数据都是用的同一个密匙。缺点是密"><meta property="og:locale" content="zh"><meta property="og:image" content="https://upload-images.jianshu.io/upload_images/1155391-3363d21169c7ed98.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/580"><meta property="og:image" content="https://img-blog.csdn.net/20180416101144691?watermark/2/text/aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzMxODI1NTY5/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70"><meta property="og:image" content="https://img-blog.csdn.net/2018041610480311?watermark/2/text/aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzMxODI1NTY5/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70"><meta property="og:updated_time" content="2020-05-26T14:45:07.923Z"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="非对称加密之PKI体系"><meta name="twitter:description" content="加密算法简述 所谓加密算法就是指将信息变成密文的计算方法。 可以很简单也可以很复杂。有的加密算法就是对信息进行简单的替换和乱序， 这种加密算法最明显的缺陷就是算法本身必须保证是保密的。 现代加密算法通常需要密匙来完成对信息的加密运算， 算法本身是可以公开的，只要保证密匙的安全就能保存信息的安全。 基于密匙的加密算法可以分为两大类:  对称加密算法： 加密数据和解密数据都是用的同一个密匙。缺点是密"><meta name="twitter:image" content="https://upload-images.jianshu.io/upload_images/1155391-3363d21169c7ed98.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/580"><link rel="canonical" href="http://daemondshu.github.io/2020/03/10/System Design/Network/RSA_PKI_encrypt/"><script id="page.configurations">CONFIG.page={sidebar:""}</script><title>非对称加密之PKI体系 | Daemon.D.Blog</title><noscript><style>.sidebar-inner,.use-motion .brand,.use-motion .collection-title,.use-motion .comments,.use-motion .menu-item,.use-motion .motion-element,.use-motion .pagination,.use-motion .post-block,.use-motion .post-body,.use-motion .post-header{opacity:initial}.use-motion .logo,.use-motion .site-subtitle,.use-motion .site-title{opacity:initial;top:initial}.use-motion .logo-line-before i{left:initial}.use-motion .logo-line-after i{right:initial}</style></noscript></head><body itemscope itemtype="http://schema.org/WebPage" lang="zh"><div class="container sidebar-position-left page-post-detail"><div class="headband"></div><header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="header-inner"><div class="site-brand-wrapper"><div class="site-meta"><div class="custom-logo-site-title"><a href="/" class="brand" rel="start"><span class="logo-line-before"><i></i></span> <span class="site-title">Daemon.D.Blog</span> <span class="logo-line-after"><i></i></span></a></div></div><div class="site-nav-toggle"><button aria-label="Toggle navigation bar"><span class="btn-bar"></span> <span class="btn-bar"></span> <span class="btn-bar"></span></button></div></div><nav class="site-nav"><ul id="menu" class="menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i><br>Home</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i><br>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i><br>Archives</a></li><li class="menu-item menu-item-search"><a href="javascript:;" class="popup-trigger"><i class="menu-item-icon fa fa-search fa-fw"></i><br>Search</a></li></ul><div class="site-search"><div class="popup search-popup local-search-popup"><div class="local-search-header clearfix"><span class="search-icon"><i class="fa fa-search"></i> </span><span class="popup-btn-close"><i class="fa fa-times-circle"></i></span><div class="local-search-input-wrapper"><input autocomplete="off" placeholder="Searching..." spellcheck="false" type="text" id="local-search-input"></div></div><div id="local-search-result"></div></div></div></nav></div></header><main id="main" class="main"><div class="main-inner"><div class="content-wrap"><div id="content" class="content"><div id="posts" class="posts-expand"><article class="post post-type-normal" itemscope itemtype="http://schema.org/Article"><div class="post-block"><link itemprop="mainEntityOfPage" href="http://daemondshu.github.io/2020/03/10/System Design/Network/RSA_PKI_encrypt/"><span hidden itemprop="author" itemscope itemtype="http://schema.org/Person"><meta itemprop="name" content="DaemondShu"><meta itemprop="description" content><meta itemprop="image" content="/images/user_256px.jpg"></span><span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization"><meta itemprop="name" content="Daemon.D.Blog"></span><header class="post-header"><h1 class="post-title" itemprop="name headline">非对称加密之PKI体系</h1><div class="post-meta"><span class="post-time"><span class="post-meta-item-icon"><i class="fa fa-calendar-o"></i> </span><span class="post-meta-item-text">Posted on</span> <time title="Created: 2020-03-10 00:00:00" itemprop="dateCreated datePublished" datetime="2020-03-10T00:00:00+08:00">2020-03-10</time> </span><span class="post-category"><span class="post-meta-divider">|</span> <span class="post-meta-item-icon"><i class="fa fa-folder-o"></i> </span><span class="post-meta-item-text">In</span> <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/System-Design/" itemprop="url" rel="index"><span itemprop="name">System Design</span></a></span> , <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/System-Design/Network/" itemprop="url" rel="index"><span itemprop="name">Network</span></a></span></span></div></header><div class="post-body" itemprop="articleBody"><h2 id="加密算法简述"><a class="markdownIt-Anchor" href="#加密算法简述"></a> 加密算法简述</h2><p>所谓加密算法就是指将信息变成密文的计算方法。 可以很简单也可以很复杂。有的加密算法就是对信息进行简单的替换和乱序， 这种加密算法最明显的缺陷就是算法本身必须保证是保密的。<br>现代加密算法通常需要密匙来完成对信息的加密运算， 算法本身是可以公开的，只要保证密匙的安全就能保存信息的安全。</p><p>基于密匙的加密算法可以分为两大类:</p><ul><li>对称加密算法：<br>加密数据和解密数据都是用的同一个密匙。缺点是密钥不安全。如AES</li><li>非对称加密算法:<br>密匙分为公钥和私钥，公钥大多数情况下用来加密数据， 私钥大多数情况下用来解密数据； 不能从公钥推导出私钥； 任何人都可以拥有公钥，都可以用来加密数据， 只有拥有私钥的人才能将信息解密。安全,但是速度比对称加密慢.</li></ul><h2 id="pki-公开密匙体"><a class="markdownIt-Anchor" href="#pki-公开密匙体"></a> PKI 公开密匙体</h2><h3 id="相关概念"><a class="markdownIt-Anchor" href="#相关概念"></a> 相关概念</h3><ul><li>PKI：Public Key Infrastructure，公钥基础设施。不是协议,只是一个比较泛的体系基础概念.</li><li>CA：Certificate Of Authority，认证中心。</li><li>RSA: 当今使用最为广泛的非对称加密算法。</li><li>数字证书：提供了一种发布公钥的简便途径；</li><li>一个数字证书包括：拥有者身份信息、公钥、CA数字签名、有效期等其他信息。</li><li>数字签名：用来确认信息发送者的身份，保证信息的完整性和抗否认性。</li></ul><h3 id="rsa-非对称加密解密理论基础"><a class="markdownIt-Anchor" href="#rsa-非对称加密解密理论基础"></a> RSA 非对称加密解密理论基础</h3><p>只能说打个比方, 如果加密就是将信息放入锁盒， 解密就是用钥匙打开。</p><ul><li>公钥是公开的锁盒,谁都买得到相同的,看得到,摸得到. 大家发送消息就是把消息装进锁盒（加密）,送出去.</li><li>私钥是私藏的钥匙,每一个锁盒只有对应的私钥才能打开锁盒,拿到里面的信息.</li></ul><p><strong>注： 实际使用中没有规定公钥必须加密，因为原理上也允许公钥加密，私钥加密。 公钥私钥在加密体系中并无区别，只是能被公开访问的是公钥， 私密持有的是私钥</strong></p><p>但是具体实现原理,我数学不好,建议看阮一峰的博文</p><ul><li>数学基础知识: <a href="http://www.ruanyifeng.com/blog/2013/06/rsa_algorithm_part_one.html" target="_blank" rel="noopener">RSA算法原理（一</a></li><li>加密解密过程: <a href="http://www.ruanyifeng.com/blog/2013/07/rsa_algorithm_part_two.html" target="_blank" rel="noopener">RSA算法原理（二）</a></li></ul><h3 id="签名与数字证书的区别"><a class="markdownIt-Anchor" href="#签名与数字证书的区别"></a> 签名与数字证书的区别</h3><ul><li>加密，是指对某个内容加密，加密后的内容还可以通过解密进行还原。</li><li>签名，是在信息的后面再加上一段内容，可以证明信息没有被修改过。一般是根据信息计算得到一个hash值（即为<code>数字摘要</code>)。信息解密后，通过新hash需要和原hash是否一致判断信息是否修改。</li><li>数字证书,由受信任的CA颁布, 在网上公开,包含签名(防止被篡改), 内含有公钥, 用于证明该公钥的确是该单位的。</li></ul><h3 id="tradeoff"><a class="markdownIt-Anchor" href="#tradeoff"></a> Tradeoff</h3><p>非对称加密速递慢不适合用于大量的数据加密传输。 为了实现数据的加密传输， 非对称加密需要和对称加密结合使用， 即</p><ul><li>非对称负责对称密匙交换,也叫<code>对话密钥(session key)</code> =&gt; 提高安全性</li><li>对称加密算法负责实际的数据加密 =&gt; 提高传输效率</li></ul><p>接下来就要讨论各种主流的通信协议</p><h3 id="ssh"><a class="markdownIt-Anchor" href="#ssh"></a> SSH</h3><p>常用于服务器通信,只涉及客户端和服务端. 有一个服务器在互联网的另一头，你需要远程登录到服务器来执行一些命令配置这台服务器。这个时候你和服务器之间就需要有数据通信。假设客户端叫A，服务器叫B。</p><p>流程:</p><ol><li>A、B之间建立TCP连接</li><li>B生成一对公私密钥</li><li>B把公钥发送给A</li><li>A生成一个用于加密数据的对称密钥K（既我们想通知给客户端的密钥，之后的数据通信都使用这个密钥加密，这个密钥不可让第三方知道）</li><li>A把K用公钥加密发送给B，B解密后，从此A、B之间的通信数据都用K密钥进行加密和解密。</li></ol><p>看上去是完美无瑕的,但是设计时候要考虑任何信息被掉包的情况,比如B被黑客C劫持, 发过来的公钥其实是C的,之后A发送的消息也被C截获,那么K就泄露给了C, 就GG了.</p><p>所以我们在登陆SSH的时候,通常会看到人工确认信息</p><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">The authenticity of host <span class="string">'xxx.xxx.xxx.xxx (&lt;no hostip for proxy command&gt;)'</span> can<span class="string">'t be established.</span></span><br><span class="line"><span class="string">RSA key fingerprint is 23:42:c1:e4:3f:d2:cc:37:1d:89:cb:e7:5d:be:5d:53.</span></span><br><span class="line"><span class="string">Are you sure you want to continue connecting (yes/no)?</span></span><br></pre></td></tr></table></figure><p>这是希望客户端A<strong>人为</strong>去验证一下登陆的服务器是不是B。显然这种方法只适合对服务器熟悉的场合才能使用,而且需要额外确认, 在广大大众上网时候,许多网站都是陌生的,所以这个方法就存留在了程序员的远程登陆</p><h3 id="tlssslsecure-sockets-layer"><a class="markdownIt-Anchor" href="#tlssslsecure-sockets-layer"></a> TLS/SSL（Secure Sockets Layer）</h3><p>SSL和TLS基本一致,就一起讲。<br>在SSL协议中引入了一种类似公共机关（类似于我国的国家公证处）的概念，就是我们熟知的CA(数字证书认证机构),为站点发送数字证书, 来证明服务器可信.</p><p>其大致流程相比于SSH,其实多了一步提前验证服务器。整体可以看成四个阶段<br><img src="https://upload-images.jianshu.io/upload_images/1155391-3363d21169c7ed98.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/580" alt="xx"></p><h4 id="单向与双向"><a class="markdownIt-Anchor" href="#单向与双向"></a> 单向与双向</h4><p>具体地, 根据对客户端的验证成都, 又可以分为单向和双向.</p><ul><li><p>单向SSL<br><img src="https://img-blog.csdn.net/20180416101144691?watermark/2/text/aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzMxODI1NTY5/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70" alt><br>第3步需要服务端的CA数字证书验证服务端</p></li><li><p>双向SSL<br><img src="https://img-blog.csdn.net/2018041610480311?watermark/2/text/aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzMxODI1NTY5/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70" alt><br>第3步需要CA的数字证书验证服务端, 第5步验证客户端</p></li><li><p>场景对比</p><ul><li>SSL单向认证只要求站点部署了SSL证书就行，任何用户都可以去访问（IP被限制除外) 一般web应用都是单向的</li><li>SSL双向认证则是需要服务端与客户端提供身份认证，只能是服务端允许的客户去访问，安全性相对高一些。常用于内网权限限制, 企业应用对接等.</li></ul></li></ul><h3 id="https"><a class="markdownIt-Anchor" href="#https"></a> HTTPS</h3><p>= HTTP+ SSL</p><p>所以会导致原本就慢的握手阶段,更加慢.</p><h2 id="reference"><a class="markdownIt-Anchor" href="#reference"></a> reference</h2><p><a href="https://www.jianshu.com/p/c65fa3af1c01" target="_blank" rel="noopener">PKI/CA工作原理及架构</a></p><p><a href="https://www.jianshu.com/p/194f787998c1" target="_blank" rel="noopener">使用多个ssh public key</a></p><p><a href="https://www.jianshu.com/p/29a90d057510" target="_blank" rel="noopener">HTTP+SSL= HTTPS</a></p><p><a href="https://blog.csdn.net/zanghuayiren/article/details/88530121" target="_blank" rel="noopener">笔记——PKI基础（二）</a></p></div><div><ul class="post-copyright"><li class="post-copyright-author"><strong>Post author: </strong>DaemondShu</li><li class="post-copyright-link"><strong>Post link: </strong><a href="http://daemondshu.github.io/2020/03/10/System Design/Network/RSA_PKI_encrypt/" title="非对称加密之PKI体系">http://daemondshu.github.io/2020/03/10/System Design/Network/RSA_PKI_encrypt/</a></li><li class="post-copyright-license"><strong>Copyright Notice: </strong>All articles in this blog are licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fa fa-fw fa-creative-commons"></i>BY-NC-SA</a> unless stating additionally.</li></ul></div><footer class="post-footer"><div class="post-nav"><div class="post-nav-next post-nav-item"><a href="/2019/12/24/System Design/Linux/Linux_IO/" rel="next" title="Linux I/O"><i class="fa fa-chevron-left"></i> Linux I/O</a></div><span class="post-nav-divider"></span><div class="post-nav-prev post-nav-item"></div></div></footer></div></article></div></div><div class="comments" id="gitalk-container"></div></div><div class="sidebar-toggle"><div class="sidebar-toggle-line-wrap"><span class="sidebar-toggle-line sidebar-toggle-line-first"></span> <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span> <span class="sidebar-toggle-line sidebar-toggle-line-last"></span></div></div><aside id="sidebar" class="sidebar"><div class="sidebar-inner"><ul class="sidebar-nav motion-element"><li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">Table of Contents</li><li class="sidebar-nav-overview" data-target="site-overview-wrap">Overview</li></ul><div class="site-overview-wrap sidebar-panel"><div class="site-overview"><div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person"><img class="site-author-image" itemprop="image" src="/images/user_256px.jpg" alt="DaemondShu"><p class="site-author-name" itemprop="name">DaemondShu</p><div class="site-description motion-element" itemprop="description"></div></div><nav class="site-state motion-element"><div class="site-state-item site-state-posts"><a href="/archives/"><span class="site-state-item-count">18</span> <span class="site-state-item-name">posts</span></a></div><div class="site-state-item site-state-categories"><a href="/categories/"><span class="site-state-item-count">11</span> <span class="site-state-item-name">categories</span></a></div></nav><div class="links-of-author motion-element"><span class="links-of-author-item"><a href="https://github.com/DaemondShu" title="GitHub &rarr; https://github.com/DaemondShu" rel="noopener" target="_blank"><i class="fa fa-fw fa-github"></i></a> </span><span class="links-of-author-item"><a href="/buqingShu@gmail.com" title="E-Mail &rarr; buqingShu@gmail.com"><i class="fa fa-fw fa-envelope"></i></a></span></div></div></div><div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active"><div class="post-toc"><div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#加密算法简述"><span class="nav-number">1.</span> <span class="nav-text">加密算法简述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#pki-公开密匙体"><span class="nav-number">2.</span> <span class="nav-text">PKI 公开密匙体</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#相关概念"><span class="nav-number">2.1.</span> <span class="nav-text">相关概念</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#rsa-非对称加密解密理论基础"><span class="nav-number">2.2.</span> <span class="nav-text">RSA 非对称加密解密理论基础</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#签名与数字证书的区别"><span class="nav-number">2.3.</span> <span class="nav-text">签名与数字证书的区别</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#tradeoff"><span class="nav-number">2.4.</span> <span class="nav-text">Tradeoff</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ssh"><span class="nav-number">2.5.</span> <span class="nav-text">SSH</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#tlssslsecure-sockets-layer"><span class="nav-number">2.6.</span> <span class="nav-text">TLS/SSL（Secure Sockets Layer）</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#单向与双向"><span class="nav-number">2.6.1.</span> <span class="nav-text">单向与双向</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#https"><span class="nav-number">2.7.</span> <span class="nav-text">HTTPS</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#reference"><span class="nav-number">3.</span> <span class="nav-text">reference</span></a></li></ol></div></div></div><div class="back-to-top"><i class="fa fa-arrow-up"></i> <span id="scrollpercent"><span>0</span>%</span></div></div></aside></div></main><footer id="footer" class="footer"><div class="footer-inner"><div class="copyright">&copy; 2016 – <span itemprop="copyrightYear">2020</span> <span class="with-love" id="animate"><i class="fa fa-user"></i> </span><span class="author" itemprop="copyrightHolder">DaemondShu</span></div><div class="footer-custom">本小站主要用于高效地知识复习，按点描述，对初学者相对不太友好，见谅。对于想从头学习的朋友，可以参看底部Reference内容。</div></div></footer></div><script>"[object Function]"!==Object.prototype.toString.call(window.Promise)&&(window.Promise=null)</script><script src="//cdn.jsdelivr.net/npm/jquery@2/dist/jquery.min.js"></script><script src="//cdn.jsdelivr.net/npm/jquery-lazyload@1/jquery.lazyload.min.js"></script><script src="//cdn.jsdelivr.net/npm/velocity-animate@1/velocity.min.js"></script><script src="//cdn.jsdelivr.net/npm/velocity-animate@1/velocity.ui.min.js"></script><script src="/js/src/utils.js?v=7.0.1"></script><script src="/js/src/motion.js?v=7.0.1"></script><script src="/js/src/affix.js?v=7.0.1"></script><script src="/js/src/schemes/pisces.js?v=7.0.1"></script><script src="/js/src/scrollspy.js?v=7.0.1"></script><script src="/js/src/post-details.js?v=7.0.1"></script><script src="/js/src/next-boot.js?v=7.0.1"></script><script src="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script><link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css"><script src="//cdn.jsdelivr.net/npm/js-md5@0.7.3/src/md5.min.js"></script><script>var gitalk=new Gitalk({clientID:"f05fc119ddf3a4777e8d",clientSecret:"7f99ebc432c4141def31dbde420976cdd59d4e9f",repo:"BlogComment",owner:"DaemondShu",admin:["DaemondShu"],id:md5(location.pathname),language:window.navigator.language||window.navigator.userLanguage,distractionFreeMode:"true"});gitalk.render("gitalk-container")</script><script>// Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url).replace(/\/{2,}/g, '/');
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x"></i></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x"></i></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.1/dist/katex.min.css"></body></html>
