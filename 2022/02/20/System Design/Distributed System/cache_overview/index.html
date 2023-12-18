@@ -1,0 +1,218 @@
+<!DOCTYPE html><html lang="en" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Get Started with Cache | Daemon.D.Blog</title><meta name="author" content="DaemondShu"><meta name="copyright" content="DaemondShu"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="What’s CacheA cache is a high-speed data storage layer that stores a subset of data, typically transient in nature, so that future requests for that data are served up faster than is possible by acces"><meta property="og:type" content="article"><meta property="og:title" content="Get Started with Cache"><meta property="og:url" content="http://daemondshu.github.io/2022/02/20/System%20Design/Distributed%20System/cache_overview/index.html"><meta property="og:site_name" content="Daemon.D.Blog"><meta property="og:description" content="What’s CacheA cache is a high-speed data storage layer that stores a subset of data, typically transient in nature, so that future requests for that data are served up faster than is possible by acces"><meta property="og:locale" content="en_US"><meta property="og:image" content="http://daemondshu.github.io/images/bg/next_size.png"><meta property="article:published_time" content="2022-02-19T16:00:00.000Z"><meta property="article:modified_time" content="2022-02-19T16:00:00.000Z"><meta property="article:author" content="DaemondShu"><meta name="twitter:card" content="summary"><meta name="twitter:image" content="http://daemondshu.github.io/images/bg/next_size.png"><link rel="shortcut icon" href="/images/logo/favicon-32x32.png"><link rel="canonical" href="http://daemondshu.github.io/2022/02/20/System%20Design/Distributed%20System/cache_overview/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload='this.media="all"'><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.min.css" media="print" onload='this.media="all"'><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: 'Copy Successful',
+    error: 'Copy Error',
+    noSupport: 'Browser Not Supported'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: 'Just now',
+    min: 'minutes ago',
+    hour: 'hours ago',
+    day: 'days ago',
+    month: 'months ago'
+  },
+  copyright: {"limitCount":50,"languages":{"author":"Author: DaemondShu","link":"Link: ","source":"Source: Daemon.D.Blog","info":"Copyright is owned by the author. For commercial reprints, please contact the author for authorization. For non-commercial reprints, please indicate the source."}},
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: 'Load More'
+  },
+  isPhotoFigcaption: false,
+  islazyload: true,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE={title:"Get Started with Cache",isPost:!0,isHome:!1,isHighlightShrink:!1,isToc:!0,postUpdate:"2022-02-20 00:00:00"}</script><script>(win=>{
+      win.saveToLocal = {
+        set: (key, value, ttl) => {
+          if (ttl === 0) return
+          const now = Date.now()
+          const expiry = now + ttl * 86400000
+          const item = {
+            value,
+            expiry
+          }
+          localStorage.setItem(key, JSON.stringify(item))
+        },
+      
+        get: key => {
+          const itemStr = localStorage.getItem(key)
+      
+          if (!itemStr) {
+            return undefined
+          }
+          const item = JSON.parse(itemStr)
+          const now = Date.now()
+      
+          if (now > item.expiry) {
+            localStorage.removeItem(key)
+            return undefined
+          }
+          return item.value
+        }
+      }
+    
+      win.getScript = (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        script.onerror = reject
+        script.onload = script.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          script.onload = script.onreadystatechange = null
+          resolve()
+        }
+
+        Object.keys(attr).forEach(key => {
+          script.setAttribute(key, attr[key])
+        })
+
+        document.head.appendChild(script)
+      })
+    
+      win.getCSS = (url, id = false) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onerror = reject
+        link.onload = link.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          link.onload = link.onreadystatechange = null
+          resolve()
+        }
+        document.head.appendChild(link)
+      })
+    
+      win.activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+        if (t === 'dark') activateDarkMode()
+        else if (t === 'light') activateLightMode()
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+      const detectApple = () => {
+        if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+          document.documentElement.classList.add('apple')
+        }
+      }
+      detectApple()
+    })(window)</script><link rel="stylesheet" href="/css/butterfly_common.css"><meta name="generator" content="Hexo 6.3.0"></head><body><div id="web_bg"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/images/user_256px.jpg" onerror='onerror=null,src="/img/friend_404.gif"' alt="avatar"></div><div class="sidebar-site-data site-data is-center"><a href="/archives/"><div class="headline">Articles</div><div class="length-num">24</div></a><a href="/tags/"><div class="headline">Tags</div><div class="length-num">1</div></a><a href="/categories/"><div class="headline">Categories</div><div class="length-num">12</div></a></div><hr class="custom-hr"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="not-top-img" id="page-header"><nav id="nav"><span id="blog-info"><a href="/" title="Daemon.D.Blog"><span class="site-name">Daemon.D.Blog</span></a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search" href="javascript:void(0);"><i class="fas fa-search fa-fw"></i><span> Search</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div></div><div id="toggle-menu"><a class="site-page" href="javascript:void(0);"><i class="fas fa-bars fa-fw"></i></a></div></div></nav></header><main class="layout" id="content-inner"><div id="post"><div id="post-info"><h1 class="post-title">Get Started with Cache</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">Created</span><time class="post-meta-date-created" datetime="2022-02-19T16:00:00.000Z" title="Created 2022-02-20 00:00:00">2022-02-20</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">Updated</span><time class="post-meta-date-updated" datetime="2022-02-19T16:00:00.000Z" title="Updated 2022-02-20 00:00:00">2022-02-20</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/System-Design/">System Design</a><i class="fas fa-angle-right post-meta-separator"></i><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/System-Design/Distributed-System/">Distributed System</a></span></div><div class="meta-secondline"></div></div></div><article class="post-content" id="article-container"><h1 id="What’s-Cache"><a href="#What’s-Cache" class="headerlink" title="What’s Cache"></a>What’s Cache</h1><p>A cache is a high-speed data storage layer that stores a subset of data, typically transient in nature, so that future requests for that data are served up faster than is possible by accessing the data’s primary storage location.</p><h2 id="Example"><a href="#Example" class="headerlink" title="Example"></a>Example</h2><p>Cache is a general technique that uses any high-speed temporary storage to avoid accessing low-speed storage. It’s widely used in various situations:</p><ol><li>(CPUCache &gt; RAM): CPU Cache saves some data to avoid accessing RAM.</li><li>(RAM &gt; DISK): RAM could be a cache when loading the data of disk.</li><li>(Local Memory &gt; remote memory): application saves data to the local cache to reduce communication with the remote server.</li><li>(Close server &gt; far server): CDN</li><li>….</li></ol><blockquote><p><a target="_blank" rel="noopener" href="https://conceptsall.com/the-memory-hierarchy-in-computer-architecture/">The Memory Hierarchy in Computer Architecture</a><br><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/2022/02/20/System%20Design/Distributed%20System/cache_overview/Memory_Hierarchy.png" loading="lazy"></p></blockquote><h2 id="Pros-amp-Note"><a href="#Pros-amp-Note" class="headerlink" title="Pros &amp; Note"></a>Pros &amp; Note</h2><ul><li><p>Pros</p><ul><li>Improve Application Performance(latency &amp; throughput), especially the reading operation</li><li>Reduce the load of low-storage, e.g. disk, database</li><li>Eliminate Database Hotspots</li></ul></li><li><p>Cons</p><ul><li>more memory usage</li><li>should be useless in a write-intensive scenario</li></ul></li><li><p>Note</p><ul><li>Cache should be transparent to business, so a good cache design should never impact business logic.</li><li>It’s important to monitor cache hit&#x2F;miss rate to make sure if cache really works</li><li>Be careful about the data consistency between cache and primary storage if<ul><li>the data on primary storage could modify without notifying cache</li><li>application writes newest data to cache only</li></ul></li></ul></li></ul><h1 id="Typical-Issues-and-Solutions"><a href="#Typical-Issues-and-Solutions" class="headerlink" title="Typical Issues and Solutions"></a>Typical Issues and Solutions</h1><p>Here is a typical workflow to query data powered by cache. Normally, cache plays a role in protecting the database and improving performance. But sometimes it does not work well, let’s show what will possibly happen and how to solve them.<br><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/2022/02/20/System%20Design/Distributed%20System/cache_overview/cache_workflow.svg" loading="lazy"></p><h2 id="Cache-Avalanche-缓存雪崩"><a href="#Cache-Avalanche-缓存雪崩" class="headerlink" title="Cache Avalanche (缓存雪崩)"></a>Cache Avalanche (缓存雪崩)</h2><p>If <strong>massive cache entries are not available</strong> for some reason, the most query requests that were originally blocked by the cache will flock to the database like a mad dog. At this point, if the database can’t withstand this huge pressure, it will collapse.</p><ul><li>Typical cause<ol><li>cache node crash</li><li>network stuck</li><li>many cache entry get expired at the same time</li></ol></li><li>Solution<ol><li>short-term solution: close&#x2F;downgrade the application layer if it’s not important to protect database</li><li>apply a cache cluster to ensure the high availability of caches</li><li>rewrite a scattered expiration time(aka random gap time) or even disable expired time</li></ol></li></ul><h2 id="Cache-Penetration-（缓存穿透"><a href="#Cache-Penetration-（缓存穿透" class="headerlink" title="Cache Penetration （缓存穿透)"></a>Cache Penetration （缓存穿透)</h2><p>The data to be queried usually exists! However, when <strong>the data does not exist at all</strong>, the application would always hit cache miss and have to query the database again and again.</p><ul><li>Typical cause<ul><li>illegal or unexpected data query</li><li>normal request</li></ul></li><li>Solution<ul><li>filter illegal or unexpected request</li><li>cache empty key</li><li>setup bloom filter to skip most queries of unexisted key<blockquote><p>Note: bloom filter is a data structure to check if it may exist or must not exist. It needs a initialization based on full data. It’s usually used with scheduled initialization for dynamic primary data.</p></blockquote></li></ul></li></ul><h2 id="Hotspot-Invalid-缓存击穿"><a href="#Hotspot-Invalid-缓存击穿" class="headerlink" title="Hotspot Invalid (缓存击穿)"></a>Hotspot Invalid (缓存击穿)</h2><p>Few hot data with really high requests get expired or deleted, there will be a large number of requests falling on the database at this moment, which may cause the database to crash even if most queries are duplicated.</p><ul><li>Typical cause<ul><li>business bug</li></ul></li><li>Solution<ul><li>make a clear plan for hot data refresh</li><li>use mutex or other checking to avoid duplicate query</li></ul></li></ul><h1 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h1><ul><li><a target="_blank" rel="noopener" href="https://aws.amazon.com/caching/">Amazon Caching Overview</a></li><li><a target="_blank" rel="noopener" href="https://segmentfault.com/a/1190000041514210/en">Cache avalanche, penetration, breakdown that Xiaobai can also understand</a></li><li><a target="_blank" rel="noopener" href="https://medium.com/@mena.meseha/3-major-problems-and-solutions-in-the-cache-world-155ecae41d4f">3 major problems and solutions in the cache world</a></li></ul></article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>Author: </span><span class="post-copyright-info"><a href="http://daemondshu.github.io">DaemondShu</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>Link: </span><span class="post-copyright-info"><a href="http://daemondshu.github.io/2022/02/20/System%20Design/Distributed%20System/cache_overview/">http://daemondshu.github.io/2022/02/20/System%20Design/Distributed%20System/cache_overview/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>Copyright Notice: </span><span class="post-copyright-info">All articles in this blog are licensed under <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> unless stating additionally.</span></div></div><div class="tag_share"><div class="post-meta__tag-list"></div><div class="post_share"><div class="social-share" data-image="/images/bg/next_size.png" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload='this.media="all"'><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/2022/05/21/Programming/Java/ModernGC/" title="JVM GC(2) | Modern Garbage Collectors - CMS, G1, ZGC, Shenandoah GC"><img class="cover" src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/images/bg/next_size.png" onerror='onerror=null,src="/img/404.jpg"' alt="cover of previous post"><div class="pagination-info"><div class="label">Previous</div><div class="prev_info">JVM GC(2) | Modern Garbage Collectors - CMS, G1, ZGC, Shenandoah GC</div></div></a></div><div class="next-post pull-right"><a href="/2021/08/20/System%20Design/Distributed%20System/distributed_transcation/" title="Distributed Transaction - 2PC, 3PC"><img class="cover" src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/images/bg/next_size.png" onerror='onerror=null,src="/img/404.jpg"' alt="cover of next post"><div class="pagination-info"><div class="label">Next</div><div class="next_info">Distributed Transaction - 2PC, 3PC</div></div></a></div></nav><hr class="custom-hr"><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> Comment</span></div></div><div class="comment-wrap"><div><div id="giscus-wrap"></div></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/images/user_256px.jpg" onerror='this.onerror=null,this.src="/img/friend_404.gif"' alt="avatar"></div><div class="author-info__name">DaemondShu</div><div class="author-info__description"></div></div><div class="card-info-data site-data is-center"><a href="/archives/"><div class="headline">Articles</div><div class="length-num">24</div></a><a href="/tags/"><div class="headline">Tags</div><div class="length-num">1</div></a><a href="/categories/"><div class="headline">Categories</div><div class="length-num">12</div></a></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>Contents</span><span class="toc-percentage"></span></div><div class="toc-content is-expand"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#What%E2%80%99s-Cache"><span class="toc-number">1.</span> <span class="toc-text">What’s Cache</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Example"><span class="toc-number">1.1.</span> <span class="toc-text">Example</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Pros-amp-Note"><span class="toc-number">1.2.</span> <span class="toc-text">Pros &amp; Note</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Typical-Issues-and-Solutions"><span class="toc-number">2.</span> <span class="toc-text">Typical Issues and Solutions</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Cache-Avalanche-%E7%BC%93%E5%AD%98%E9%9B%AA%E5%B4%A9"><span class="toc-number">2.1.</span> <span class="toc-text">Cache Avalanche (缓存雪崩)</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Cache-Penetration-%EF%BC%88%E7%BC%93%E5%AD%98%E7%A9%BF%E9%80%8F"><span class="toc-number">2.2.</span> <span class="toc-text">Cache Penetration （缓存穿透)</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Hotspot-Invalid-%E7%BC%93%E5%AD%98%E5%87%BB%E7%A9%BF"><span class="toc-number">2.3.</span> <span class="toc-text">Hotspot Invalid (缓存击穿)</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Reference"><span class="toc-number">3.</span> <span class="toc-text">Reference</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>Recent Post</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2022/10/16/System%20Design/Distributed%20System/consistency_model/" title="Consistency Model Summary in Distributed System">Consistency Model Summary in Distributed System</a><time datetime="2022-10-15T16:00:00.000Z" title="Updated 2022-10-16 00:00:00">2022-10-16</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2022/05/21/Programming/Java/ModernGC/" title="JVM GC(2) | Modern Garbage Collectors - CMS, G1, ZGC, Shenandoah GC">JVM GC(2) | Modern Garbage Collectors - CMS, G1, ZGC, Shenandoah GC</a><time datetime="2022-05-20T16:00:00.000Z" title="Updated 2022-05-21 00:00:00">2022-05-21</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2022/02/20/System%20Design/Distributed%20System/cache_overview/" title="Get Started with Cache">Get Started with Cache</a><time datetime="2022-02-19T16:00:00.000Z" title="Updated 2022-02-20 00:00:00">2022-02-20</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2021/08/20/System%20Design/Distributed%20System/distributed_transcation/" title="Distributed Transaction - 2PC, 3PC">Distributed Transaction - 2PC, 3PC</a><time datetime="2021-08-19T16:00:00.000Z" title="Updated 2021-08-20 00:00:00">2021-08-20</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2021/04/05/Storage/Database/Database_Transaction/" title="Database Transaction - ACID &amp; Isolation Level">Database Transaction - ACID &amp; Isolation Level</a><time datetime="2021-06-09T16:00:00.000Z" title="Updated 2021-06-10 00:00:00">2021-06-10</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2016 - 2023 By DaemondShu</div><div class="framework-info"><span>Framework </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>Theme </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="Read Mode"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="Toggle Between Light And Dark Mode"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="Toggle between Single-column and Double-column"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="Setting"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="Table Of Contents"><i class="fas fa-list-ul"></i></button><a id="to_comment" href="#post-comment" title="Scroll To Comments"><i class="fas fa-comments"></i></a><button id="go-up" type="button" title="Back To Top"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.umd.min.js"></script><script src="https://cdn.jsdelivr.net/npm/vanilla-lazyload/dist/lazyload.iife.min.js"></script><div class="js-pjax"><script>if (!window.MathJax) {
+  window.MathJax = {
+    tex: {
+      inlineMath: [['$', '$'], ['\\(', '\\)']],
+      tags: 'ams'
+    },
+    chtml: {
+      scale: 1.1
+    },
+    options: {
+      renderActions: {
+        findScript: [10, doc => {
+          for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+            const display = !!node.type.match(/; *mode=display/)
+            const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+            const text = document.createTextNode('')
+            node.parentNode.replaceChild(text, node)
+            math.start = {node: text, delim: '', n: 0}
+            math.end = {node: text, delim: '', n: 0}
+            doc.math.push(math)
+          }
+        }, '']
+      }
+    }
+  }
+  
+  const script = document.createElement('script')
+  script.src = 'https://cdn.jsdelivr.net/npm/mathjax/es5/tex-mml-chtml.min.js'
+  script.id = 'MathJax-script'
+  script.async = true
+  document.head.appendChild(script)
+} else {
+  MathJax.startup.document.state(0)
+  MathJax.texReset()
+  MathJax.typesetPromise()
+}</script><script>(()=>{
+  const getGiscusTheme = theme => {
+    return theme === 'dark' ? 'dark' : 'light'
+  }
+
+  const loadGiscus = () => {
+    const config = Object.assign({
+      src: 'https://giscus.app/client.js',
+      'data-repo': 'DaemondShu/DaemondShu.github.io',
+      'data-repo-id': 'MDEwOlJlcG9zaXRvcnkxNzYxMjUzNDI=',
+      'data-category-id': 'DIC_kwDOCn91ns4CTWjW',
+      'data-mapping': 'pathname',
+      'data-theme': getGiscusTheme(document.documentElement.getAttribute('data-theme')),
+      'data-reactions-enabled': '1',
+      crossorigin: 'anonymous',
+      async: true
+    },null)
+
+    const ele = document.createElement('script')
+    for (let key in config) {
+      ele.setAttribute(key, config[key])
+    }
+    document.getElementById('giscus-wrap').appendChild(ele)
+  }
+
+  const changeGiscusTheme = theme => {
+    const sendMessage = message => {
+      const iframe = document.querySelector('iframe.giscus-frame')
+      if (!iframe) return
+      iframe.contentWindow.postMessage({ giscus: message }, 'https://giscus.app')
+    }
+
+    sendMessage({
+      setConfig: {
+        theme: getGiscusTheme(theme)
+      }
+    });
+  }
+
+  btf.addGlobalFn('themeChange', changeGiscusTheme, 'giscus')
+
+  if ('Giscus' === 'Giscus' || !true) {
+    if (true) btf.loadComment(document.getElementById('giscus-wrap'), loadGiscus)
+    else loadGiscus()
+  } else {
+    window.loadOtherComment= loadGiscus
+  }
+})()</script></div><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">Search</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span> Loading the Database</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="Search for Posts" type="text"></div></div><hr><div id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="/js/search/local-search.js"></script></div></div></body></html>

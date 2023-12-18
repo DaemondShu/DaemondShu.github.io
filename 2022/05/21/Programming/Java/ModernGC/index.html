@@ -1,0 +1,218 @@
+<!DOCTYPE html><html lang="en" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>JVM GC(2) | Modern Garbage Collectors - CMS, G1, ZGC, Shenandoah GC | Daemon.D.Blog</title><meta name="author" content="DaemondShu"><meta name="copyright" content="DaemondShu"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="WarmUpBasic operations in GC Mark: mark the reachable objects Sweep: clear the unreachable objects Copy-Move: Copy the reachable objects to another space Compaction: Compact the reachable objects in-p"><meta property="og:type" content="article"><meta property="og:title" content="JVM GC(2) | Modern Garbage Collectors - CMS, G1, ZGC, Shenandoah GC"><meta property="og:url" content="http://daemondshu.github.io/2022/05/21/Programming/Java/ModernGC/index.html"><meta property="og:site_name" content="Daemon.D.Blog"><meta property="og:description" content="WarmUpBasic operations in GC Mark: mark the reachable objects Sweep: clear the unreachable objects Copy-Move: Copy the reachable objects to another space Compaction: Compact the reachable objects in-p"><meta property="og:locale" content="en_US"><meta property="og:image" content="http://daemondshu.github.io/images/bg/next_size.png"><meta property="article:published_time" content="2022-05-20T16:00:00.000Z"><meta property="article:modified_time" content="2022-05-20T16:00:00.000Z"><meta property="article:author" content="DaemondShu"><meta property="article:tag" content="GC"><meta name="twitter:card" content="summary"><meta name="twitter:image" content="http://daemondshu.github.io/images/bg/next_size.png"><link rel="shortcut icon" href="/images/logo/favicon-32x32.png"><link rel="canonical" href="http://daemondshu.github.io/2022/05/21/Programming/Java/ModernGC/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload='this.media="all"'><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.min.css" media="print" onload='this.media="all"'><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: 'Copy Successful',
+    error: 'Copy Error',
+    noSupport: 'Browser Not Supported'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: 'Just now',
+    min: 'minutes ago',
+    hour: 'hours ago',
+    day: 'days ago',
+    month: 'months ago'
+  },
+  copyright: {"limitCount":50,"languages":{"author":"Author: DaemondShu","link":"Link: ","source":"Source: Daemon.D.Blog","info":"Copyright is owned by the author. For commercial reprints, please contact the author for authorization. For non-commercial reprints, please indicate the source."}},
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: 'Load More'
+  },
+  isPhotoFigcaption: false,
+  islazyload: true,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE={title:"JVM GC(2) | Modern Garbage Collectors - CMS, G1, ZGC, Shenandoah GC",isPost:!0,isHome:!1,isHighlightShrink:!1,isToc:!0,postUpdate:"2022-05-21 00:00:00"}</script><script>(win=>{
+      win.saveToLocal = {
+        set: (key, value, ttl) => {
+          if (ttl === 0) return
+          const now = Date.now()
+          const expiry = now + ttl * 86400000
+          const item = {
+            value,
+            expiry
+          }
+          localStorage.setItem(key, JSON.stringify(item))
+        },
+      
+        get: key => {
+          const itemStr = localStorage.getItem(key)
+      
+          if (!itemStr) {
+            return undefined
+          }
+          const item = JSON.parse(itemStr)
+          const now = Date.now()
+      
+          if (now > item.expiry) {
+            localStorage.removeItem(key)
+            return undefined
+          }
+          return item.value
+        }
+      }
+    
+      win.getScript = (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        script.onerror = reject
+        script.onload = script.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          script.onload = script.onreadystatechange = null
+          resolve()
+        }
+
+        Object.keys(attr).forEach(key => {
+          script.setAttribute(key, attr[key])
+        })
+
+        document.head.appendChild(script)
+      })
+    
+      win.getCSS = (url, id = false) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onerror = reject
+        link.onload = link.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          link.onload = link.onreadystatechange = null
+          resolve()
+        }
+        document.head.appendChild(link)
+      })
+    
+      win.activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+        if (t === 'dark') activateDarkMode()
+        else if (t === 'light') activateLightMode()
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+      const detectApple = () => {
+        if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+          document.documentElement.classList.add('apple')
+        }
+      }
+      detectApple()
+    })(window)</script><link rel="stylesheet" href="/css/butterfly_common.css"><meta name="generator" content="Hexo 6.3.0"></head><body><div id="web_bg"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/images/user_256px.jpg" onerror='onerror=null,src="/img/friend_404.gif"' alt="avatar"></div><div class="sidebar-site-data site-data is-center"><a href="/archives/"><div class="headline">Articles</div><div class="length-num">24</div></a><a href="/tags/"><div class="headline">Tags</div><div class="length-num">1</div></a><a href="/categories/"><div class="headline">Categories</div><div class="length-num">12</div></a></div><hr class="custom-hr"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="not-top-img" id="page-header"><nav id="nav"><span id="blog-info"><a href="/" title="Daemon.D.Blog"><span class="site-name">Daemon.D.Blog</span></a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search" href="javascript:void(0);"><i class="fas fa-search fa-fw"></i><span> Search</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div></div><div id="toggle-menu"><a class="site-page" href="javascript:void(0);"><i class="fas fa-bars fa-fw"></i></a></div></div></nav></header><main class="layout" id="content-inner"><div id="post"><div id="post-info"><h1 class="post-title">JVM GC(2) | Modern Garbage Collectors - CMS, G1, ZGC, Shenandoah GC</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">Created</span><time class="post-meta-date-created" datetime="2022-05-20T16:00:00.000Z" title="Created 2022-05-21 00:00:00">2022-05-21</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">Updated</span><time class="post-meta-date-updated" datetime="2022-05-20T16:00:00.000Z" title="Updated 2022-05-21 00:00:00">2022-05-21</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Programming/">Programming</a><i class="fas fa-angle-right post-meta-separator"></i><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Programming/Java/">Java</a></span></div><div class="meta-secondline"></div></div></div><article class="post-content" id="article-container"><h1 id="WarmUp"><a href="#WarmUp" class="headerlink" title="WarmUp"></a>WarmUp</h1><h2 id="Basic-operations-in-GC"><a href="#Basic-operations-in-GC" class="headerlink" title="Basic operations in GC"></a>Basic operations in GC</h2><ul><li>Mark: mark the reachable objects</li><li>Sweep: clear the unreachable objects</li><li>Copy-Move: Copy the reachable objects to another space</li><li>Compaction: Compact the reachable objects in-place<blockquote><p>Some GC docs regard the Copy-Move operation as Compaction as well.</p></blockquote></li></ul><h2 id="Parallel-vs-Concurrent"><a href="#Parallel-vs-Concurrent" class="headerlink" title="Parallel vs Concurrent"></a>Parallel vs Concurrent</h2><ul><li>Parallel: GC process runs multiple threads in parallel with STW.</li><li>Concurrent: GC runs concurrently with the application <strong>without STW</strong>.</li></ul><h2 id="Why-STW-GC-races"><a href="#Why-STW-GC-races" class="headerlink" title="Why STW? - GC races"></a>Why STW? - GC races</h2><p>GC races with Application:</p><ul><li>Change object reference when marking</li><li>Access object when reference is changing (Compact, Copy&amp;Move)</li></ul><h2 id="GC-barriers"><a href="#GC-barriers" class="headerlink" title="GC barriers"></a>GC barriers</h2><p>ZGC and Shenandoah GC inject GC-related code before loading&#x2F;storing the object on the assembly code.</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">0. loading: f = obj.field  /   storing: obj.f = o</span><br><span class="line">// ------ barrier -------</span><br><span class="line">1. get the state of address(obejct)  </span><br><span class="line">2. if the state indicates a possible GC race, then STW and do something</span><br><span class="line">// ------ barrier -------</span><br></pre></td></tr></table></figure><h1 id="Garbage-Collector-Landscape"><a href="#Garbage-Collector-Landscape" class="headerlink" title="Garbage Collector Landscape"></a>Garbage Collector Landscape</h1><p><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/2022/05/21/Programming/Java/ModernGC/GC_landscape.png" loading="lazy"></p><h2 id="Parallel-New-Parallel-Old"><a href="#Parallel-New-Parallel-Old" class="headerlink" title="Parallel New + Parallel Old"></a>Parallel New + Parallel Old</h2><p>The ParallelOld GC is a <strong>two-generational parallel STW</strong> garbage collector, which means that whenever a garbage collection occurs in either generation, all application threads are stopped, and the GC work is performed using multiple threads.</p><ul><li>new generation: <code>copy</code></li><li>old generation: <code>compaction</code><br><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/2022/05/21/Programming/Java/ModernGC/parallel_GC.png" loading="lazy"></li></ul><h2 id="Parallel-New-CMS-Concurrent-Mark-Sweep"><a href="#Parallel-New-CMS-Concurrent-Mark-Sweep" class="headerlink" title="Parallel New + CMS(Concurrent Mark Sweep)"></a>Parallel New + CMS(Concurrent Mark Sweep)</h2><p>CMS was developed in response to a growing number of applications that demanded a collector with lower worst-case pause.<br><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/2022/05/21/Programming/Java/ModernGC/GC_CMS.png" alt="2022-12-08T211550" loading="lazy"></p><h3 id="major-change-against-Parallel-Old"><a href="#major-change-against-Parallel-Old" class="headerlink" title="major change against Parallel Old"></a>major change against Parallel Old</h3><ul><li><p>use <code>sweep</code> to achieve concurrent processing</p><ul><li><p>because the object to be released will not be accessed by the application threads.</p></li><li><p><strong>Cons</strong>: more memory fragments(holes)</p><ul><li><strong>How CMS handles fragments?</strong> CMS FGC sometimes triggers compaction. (Related parameters about when to trigger compaction: <code>-XX：+UseCMS-CompactAtFullCollection</code>, <code>-XX：CMSFullGCsBefore-Compaction</code>)</li><li>So the worst pause of CMS is decided by compaction instead of sweep.</li></ul></li></ul></li><li><p>introduce multi-stage mark</p><ol><li>mark alive objects concurrently</li><li>remark fewer objects which have changed reference at <code>concurrent mark</code></li></ol></li></ul><h2 id="G1-Garbage-first"><a href="#G1-Garbage-first" class="headerlink" title="G1 (Garbage-first)"></a>G1 (Garbage-first)</h2><p>Young and old generation are never a contiguous chunk of memory. Both the young and old generations are a set of <code>regions</code> where most GC operations can be applied individually to each region. Also, regions that belong to the same set and therefore same generation do not need to be contiguous in memory.<br><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/2022/05/21/Programming/Java/ModernGC/G1_region.png" alt="2022-12-08T214448" loading="lazy"></p><h3 id="Optimization-of-region"><a href="#Optimization-of-region" class="headerlink" title="Optimization of region"></a>Optimization of region</h3><ol><li>Use fine-grained(region by region) copy to replace entire generation compaction&#x2F;copy.</li><li>Regions filled with all alive objects skip compaction and copying.<ul><li>it’s really fast when changing the color(generation) of the region, e.g. survivor-&gt;old</li></ul></li><li>Make GC pauses to achieve predictability, namely, the <strong>maximum pause time of GC could be controlled</strong> by GC could be stopped at any stage with completing a part of regions and the size of generations could be adjusted.</li></ol><h2 id="Shenandoah-GC-SGC-2-0"><a href="#Shenandoah-GC-SGC-2-0" class="headerlink" title="Shenandoah GC (SGC) 2.0"></a>Shenandoah GC (SGC) 2.0</h2><p>Work for all JDK LTS version(8,11,17) and 32&#x2F;64 bits system!!!</p><h3 id="Compared-with-G1"><a href="#Compared-with-G1" class="headerlink" title="Compared with G1"></a>Compared with G1</h3><ul><li>Scalable Low Latency GC</li><li>All regions in single Generations<ul><li>It prefers to relocate region with most garbage&#x2F; least live object first.</li></ul></li><li>Concurrent Compaction&amp;mark<br><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/2022/05/21/Programming/Java/ModernGC/SGC_workflow.png" loading="lazy"></li><li><strong>How to reduce GC races</strong><ul><li><strong>Postpone Remark</strong>: SGC postponed the remark(remap) to next GC mark. Remark is a step to remap the reference which is changed by application threads in-or-after the latest concurrent mark.<br><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/2022/05/21/Programming/Java/ModernGC/SGC_ZGC_POSTPONE_REMAP.png" alt="2022-12-11T213732" loading="lazy"></li><li><strong>Barrier</strong>: Uses load&#x2F;store barrier to do tiny relocation with STW.<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//Load Barrier(LRB - Load Reference Barrier)</span></span><br><span class="line"><span class="type">Object</span> <span class="variable">f</span> <span class="operator">=</span> obj.f;</span><br><span class="line"><span class="keyword">if</span> (in_evac_phase &amp;&amp; in_collection_set(obj) &amp;&amp; !is_forwarded(obj))</span><br><span class="line">  slow_path(); <span class="comment">//do something with STW to handle GC races</span></span><br></pre></td></tr></table></figure></li></ul></li></ul><blockquote><p>Load Barrier example: What if GC barrier hit conflict with normal GC relocation? GC relocation skip it, since GC barrier did relocation of the page.</p><ol><li>Object is in Evacuation (GC Copy),<br><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/2022/05/21/Programming/Java/ModernGC/SGC_01.png" alt="SGC_01" loading="lazy"></li><li>Application tries to load the object and triggers LRB, the <code>slow_path</code> clones a new object<br><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/2022/05/21/Programming/Java/ModernGC/SGC_02.png" alt="SGC_02" loading="lazy"></li><li>Application updates the forward pointer, the ongoing GC copy will skip resetting forward pointer when finding the forward pointer set already.<br><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/2022/05/21/Programming/Java/ModernGC/SGC_03.png" alt="SGC_03" loading="lazy"></li><li>Application update reference automatically when meeting a valid forward pointer<br><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/2022/05/21/Programming/Java/ModernGC/SGC_04.png" alt="SGC_04" loading="lazy"></li></ol></blockquote><h2 id="ZGC-Production-X64-JDK17"><a href="#ZGC-Production-X64-JDK17" class="headerlink" title="ZGC (Production X64 JDK17)"></a>ZGC (Production X64 JDK17)</h2><p>(Introduced in JDK11, production in <code>64bits</code> JDK17)</p><p>ZGC and SGC are like a twin, but ZGC works different on managing the object state. Since 64 bits system has some reserved bits, ZGC could involve more efficient methods.</p><blockquote><p>ZGC is not the upgraded version of SGC. Actually, ZGC was introduced before SGC and they are maintained by different teams(ZGC - ORCALE, SGC - RedHat). ZGC and SGC share the similar design and we could regard SGC as a adaptable version for 32bit and legacy JDK.</p></blockquote><h3 id="Compared-with-SGC"><a href="#Compared-with-SGC" class="headerlink" title="Compared with SGC"></a>Compared with SGC</h3><ul><li><p>Fine-grained Region ~ ZPages</p><ul><li>Small (2 MiB - object size up to 256 KiB)</li><li>Medium (32 MiB - object size up to 4 MiB)</li><li>Large (4+ MiB - object size &gt; 4 MiB)</li></ul></li><li><p>Mark objects with colored pointers:<br>Uses 4 reserved bits from 64-bits address to represent the state of the object.<br><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/2022/05/21/Programming/Java/ModernGC/color_bits.png" alt="x" loading="lazy"></p><ul><li>MultiMapping<br><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/2022/05/21/Programming/Java/ModernGC/multi_mapping.png" alt="multi_mapping" loading="lazy"><blockquote><p>Note: some memory indicators(<code>RSS</code>) may get several times size as it takes 3 virtual address. We’d better use PSS to track memory usage.</p></blockquote></li></ul></li><li><p>Load barrier with color bits</p><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">Object</span> <span class="variable">f</span> <span class="operator">=</span> obj.field;</span><br><span class="line"><span class="keyword">if</span> (addr_of(f) &amp; wrong_gc_color) &#123; <span class="comment">//Wrong color =&gt; take action</span></span><br><span class="line">  slow_path() <span class="comment">// do something with STW to handle GC races</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li></ul><h1 id="How-to-Choose-GC"><a href="#How-to-Choose-GC" class="headerlink" title="How to Choose GC"></a>How to Choose GC</h1><h2 id="Compatibility"><a href="#Compatibility" class="headerlink" title="Compatibility"></a>Compatibility</h2><ul><li>Parallel: default for JDK (&lt;&#x3D;)8</li><li>CMS: introduced in JDK 5, removed in JDK14</li><li>G1: default in JDK 9</li><li>ZGC: production in 64-bits JDK 17</li><li>SGC: support all JDK with LTS versions(8,11,17)</li></ul><h2 id="Useful-GC-Parameters"><a href="#Useful-GC-Parameters" class="headerlink" title="Useful GC Parameters"></a>Useful GC Parameters</h2><ul><li><p>Common GC parameters</p><ul><li><code>-Xms</code>: min heap size</li><li><code>-Xmx</code>: max heap size</li><li><code>-XX:ConcGCThreads</code>: the number of threads in concurrent process</li><li><code>-XX:ParallelGCThreads</code>: the number of threads in STW process</li><li><code>-XX:SoftRefLRUPolicyMSPerMB</code>: impact the early release of soft reference.</li></ul></li><li><p>Parallel New</p><ul><li><code>-XX:MaxTenuringThreshold</code>: specifies for how many minor GC cycles an object will stay in the survivor spaces until it finally gets tenured into the old space.</li><li><code>-XX:SurvivorRatio</code>(8 by default): the ratio of Eden size to Survivor size.</li><li><code>-XX:MaxNewSize</code>, <code>-XX:NewSize</code>: the size of the new generation</li></ul></li><li><p>G1</p><ul><li><strong><code>-XX:MaxGCPauseMillis</code></strong>: It’s the most important parameter for G1, G1 will adjust young generation size(-XX:G1NewSizePercent) automatically according to real pause time.</li></ul></li><li><p>ZGC, SGC:</p><ul><li>Aha, maybe it’s enough to set common GC parameters in most cases.</li></ul></li><li><p>GC log print &amp; analysis</p><ul><li><code>-XX:+PrintGC</code></li><li><code>-XX:+PrintGCTimeStamps</code></li><li><code>-XX:+PrintGCDetails</code></li><li><code>-Xloggc</code>: gc file</li></ul></li></ul><blockquote><p>Suggest to use third-party GC visual tool to review GC log, such as <a target="_blank" rel="noopener" href="https://gceasy.io/">GCeasy</a></p></blockquote><h2 id="No-Universal-GC"><a href="#No-Universal-GC" class="headerlink" title="No Universal GC"></a>No Universal GC</h2><p><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/2022/05/21/Programming/Java/ModernGC/universal_gc.png" loading="lazy"></p><ul><li>Sensitive to worst or P99 pause(&lt;10ms). e.g. web serivces, real-time big-data system<ul><li>ZGC for 64bit system</li><li>SGC for legacy JDK(8,11,16) or 32-bit system</li></ul></li><li>has very strict and clear pause-time goals and a modest overall throughput<ul><li>G1<code>?</code></li></ul></li><li>Requires high throughput but does not care about the worst pause. e.g. batch task<ul><li>Parallel, CMS<code>?</code></li></ul></li></ul><p><strong>Note: I mark G1, Parallel, CSM with <code>?</code>, as overload is related the cpu load&#x2F;usage but may not stands for the reduction of throughput.</strong></p><blockquote><p>Benchmark: Quick glance at Cassandra<br>RI &#x3D; read-intensive (75% read, 25% write)</p><ul><li>Througput<br><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/2022/05/21/Programming/Java/ModernGC/bench_throughput.png" loading="lazy"></li><li>Pause<br><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/2022/05/21/Programming/Java/ModernGC/bench_latency.png" loading="lazy"></li></ul></blockquote><h2 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h2><ul><li><a target="_blank" rel="noopener" href="https://wiki.openjdk.org/display/zModernGC/Main">ZGC wiki</a></li><li><a target="_blank" rel="noopener" href="https://wiki.openjdk.org/display/shenandoah">SGC wiki</a></li><li><a target="_blank" rel="noopener" href="https://www.youtube.com/watch?v=WU_mqNBEacw">ZGC+SGC youtube</a></li><li><a target="_blank" rel="noopener" href="https://rodrigo-bruno.github.io/mentoring/77998-Carlos-Goncalves_dissertacao.pdf">A Performance Comparison of Modern Garbage Collectors for Big Data Environments</a></li><li><a target="_blank" rel="noopener" href="https://tech.meituan.com/2020/11/12/java-9-cms-gc.html">Java中9种常见的CMS GC问题分析与解决</a></li><li><a target="_blank" rel="noopener" href="https://tech.meituan.com/2020/08/06/new-zgc-practice-in-meituan.html">新一代垃圾回收器ZGC的探索与实践 - 美团技术团队</a></li></ul></article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>Author: </span><span class="post-copyright-info"><a href="http://daemondshu.github.io">DaemondShu</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>Link: </span><span class="post-copyright-info"><a href="http://daemondshu.github.io/2022/05/21/Programming/Java/ModernGC/">http://daemondshu.github.io/2022/05/21/Programming/Java/ModernGC/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>Copyright Notice: </span><span class="post-copyright-info">All articles in this blog are licensed under <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> unless stating additionally.</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/GC/">GC</a></div><div class="post_share"><div class="social-share" data-image="/images/bg/next_size.png" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload='this.media="all"'><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/2022/10/16/System%20Design/Distributed%20System/consistency_model/" title="Consistency Model Summary in Distributed System"><img class="cover" src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/images/bg/next_size.png" onerror='onerror=null,src="/img/404.jpg"' alt="cover of previous post"><div class="pagination-info"><div class="label">Previous</div><div class="prev_info">Consistency Model Summary in Distributed System</div></div></a></div><div class="next-post pull-right"><a href="/2022/02/20/System%20Design/Distributed%20System/cache_overview/" title="Get Started with Cache"><img class="cover" src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/images/bg/next_size.png" onerror='onerror=null,src="/img/404.jpg"' alt="cover of next post"><div class="pagination-info"><div class="label">Next</div><div class="next_info">Get Started with Cache</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>Related Articles</span></div><div class="relatedPosts-list"><div><a href="/2017/03/17/Programming/Java/Java_JVM_GC/" title="JVM GC(1) | 内存结构与GC基础"><img class="cover" src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/images/bg/next_size.png" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2017-03-17</div><div class="title">JVM GC(1) | 内存结构与GC基础</div></div></a></div></div></div><hr class="custom-hr"><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> Comment</span></div></div><div class="comment-wrap"><div><div id="giscus-wrap"></div></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/images/user_256px.jpg" onerror='this.onerror=null,this.src="/img/friend_404.gif"' alt="avatar"></div><div class="author-info__name">DaemondShu</div><div class="author-info__description"></div></div><div class="card-info-data site-data is-center"><a href="/archives/"><div class="headline">Articles</div><div class="length-num">24</div></a><a href="/tags/"><div class="headline">Tags</div><div class="length-num">1</div></a><a href="/categories/"><div class="headline">Categories</div><div class="length-num">12</div></a></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>Contents</span><span class="toc-percentage"></span></div><div class="toc-content is-expand"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#WarmUp"><span class="toc-number">1.</span> <span class="toc-text">WarmUp</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Basic-operations-in-GC"><span class="toc-number">1.1.</span> <span class="toc-text">Basic operations in GC</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Parallel-vs-Concurrent"><span class="toc-number">1.2.</span> <span class="toc-text">Parallel vs Concurrent</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Why-STW-GC-races"><span class="toc-number">1.3.</span> <span class="toc-text">Why STW? - GC races</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#GC-barriers"><span class="toc-number">1.4.</span> <span class="toc-text">GC barriers</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Garbage-Collector-Landscape"><span class="toc-number">2.</span> <span class="toc-text">Garbage Collector Landscape</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Parallel-New-Parallel-Old"><span class="toc-number">2.1.</span> <span class="toc-text">Parallel New + Parallel Old</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Parallel-New-CMS-Concurrent-Mark-Sweep"><span class="toc-number">2.2.</span> <span class="toc-text">Parallel New + CMS(Concurrent Mark Sweep)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#major-change-against-Parallel-Old"><span class="toc-number">2.2.1.</span> <span class="toc-text">major change against Parallel Old</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#G1-Garbage-first"><span class="toc-number">2.3.</span> <span class="toc-text">G1 (Garbage-first)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Optimization-of-region"><span class="toc-number">2.3.1.</span> <span class="toc-text">Optimization of region</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Shenandoah-GC-SGC-2-0"><span class="toc-number">2.4.</span> <span class="toc-text">Shenandoah GC (SGC) 2.0</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Compared-with-G1"><span class="toc-number">2.4.1.</span> <span class="toc-text">Compared with G1</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#ZGC-Production-X64-JDK17"><span class="toc-number">2.5.</span> <span class="toc-text">ZGC (Production X64 JDK17)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Compared-with-SGC"><span class="toc-number">2.5.1.</span> <span class="toc-text">Compared with SGC</span></a></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#How-to-Choose-GC"><span class="toc-number">3.</span> <span class="toc-text">How to Choose GC</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Compatibility"><span class="toc-number">3.1.</span> <span class="toc-text">Compatibility</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Useful-GC-Parameters"><span class="toc-number">3.2.</span> <span class="toc-text">Useful GC Parameters</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#No-Universal-GC"><span class="toc-number">3.3.</span> <span class="toc-text">No Universal GC</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Reference"><span class="toc-number">3.4.</span> <span class="toc-text">Reference</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>Recent Post</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2022/10/16/System%20Design/Distributed%20System/consistency_model/" title="Consistency Model Summary in Distributed System">Consistency Model Summary in Distributed System</a><time datetime="2022-10-15T16:00:00.000Z" title="Updated 2022-10-16 00:00:00">2022-10-16</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2022/05/21/Programming/Java/ModernGC/" title="JVM GC(2) | Modern Garbage Collectors - CMS, G1, ZGC, Shenandoah GC">JVM GC(2) | Modern Garbage Collectors - CMS, G1, ZGC, Shenandoah GC</a><time datetime="2022-05-20T16:00:00.000Z" title="Updated 2022-05-21 00:00:00">2022-05-21</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2022/02/20/System%20Design/Distributed%20System/cache_overview/" title="Get Started with Cache">Get Started with Cache</a><time datetime="2022-02-19T16:00:00.000Z" title="Updated 2022-02-20 00:00:00">2022-02-20</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2021/08/20/System%20Design/Distributed%20System/distributed_transcation/" title="Distributed Transaction - 2PC, 3PC">Distributed Transaction - 2PC, 3PC</a><time datetime="2021-08-19T16:00:00.000Z" title="Updated 2021-08-20 00:00:00">2021-08-20</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2021/04/05/Storage/Database/Database_Transaction/" title="Database Transaction - ACID &amp; Isolation Level">Database Transaction - ACID &amp; Isolation Level</a><time datetime="2021-06-09T16:00:00.000Z" title="Updated 2021-06-10 00:00:00">2021-06-10</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2016 - 2023 By DaemondShu</div><div class="framework-info"><span>Framework </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>Theme </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="Read Mode"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="Toggle Between Light And Dark Mode"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="Toggle between Single-column and Double-column"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="Setting"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="Table Of Contents"><i class="fas fa-list-ul"></i></button><a id="to_comment" href="#post-comment" title="Scroll To Comments"><i class="fas fa-comments"></i></a><button id="go-up" type="button" title="Back To Top"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.umd.min.js"></script><script src="https://cdn.jsdelivr.net/npm/vanilla-lazyload/dist/lazyload.iife.min.js"></script><div class="js-pjax"><script>if (!window.MathJax) {
+  window.MathJax = {
+    tex: {
+      inlineMath: [['$', '$'], ['\\(', '\\)']],
+      tags: 'ams'
+    },
+    chtml: {
+      scale: 1.1
+    },
+    options: {
+      renderActions: {
+        findScript: [10, doc => {
+          for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+            const display = !!node.type.match(/; *mode=display/)
+            const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+            const text = document.createTextNode('')
+            node.parentNode.replaceChild(text, node)
+            math.start = {node: text, delim: '', n: 0}
+            math.end = {node: text, delim: '', n: 0}
+            doc.math.push(math)
+          }
+        }, '']
+      }
+    }
+  }
+  
+  const script = document.createElement('script')
+  script.src = 'https://cdn.jsdelivr.net/npm/mathjax/es5/tex-mml-chtml.min.js'
+  script.id = 'MathJax-script'
+  script.async = true
+  document.head.appendChild(script)
+} else {
+  MathJax.startup.document.state(0)
+  MathJax.texReset()
+  MathJax.typesetPromise()
+}</script><script>(()=>{
+  const getGiscusTheme = theme => {
+    return theme === 'dark' ? 'dark' : 'light'
+  }
+
+  const loadGiscus = () => {
+    const config = Object.assign({
+      src: 'https://giscus.app/client.js',
+      'data-repo': 'DaemondShu/DaemondShu.github.io',
+      'data-repo-id': 'MDEwOlJlcG9zaXRvcnkxNzYxMjUzNDI=',
+      'data-category-id': 'DIC_kwDOCn91ns4CTWjW',
+      'data-mapping': 'pathname',
+      'data-theme': getGiscusTheme(document.documentElement.getAttribute('data-theme')),
+      'data-reactions-enabled': '1',
+      crossorigin: 'anonymous',
+      async: true
+    },null)
+
+    const ele = document.createElement('script')
+    for (let key in config) {
+      ele.setAttribute(key, config[key])
+    }
+    document.getElementById('giscus-wrap').appendChild(ele)
+  }
+
+  const changeGiscusTheme = theme => {
+    const sendMessage = message => {
+      const iframe = document.querySelector('iframe.giscus-frame')
+      if (!iframe) return
+      iframe.contentWindow.postMessage({ giscus: message }, 'https://giscus.app')
+    }
+
+    sendMessage({
+      setConfig: {
+        theme: getGiscusTheme(theme)
+      }
+    });
+  }
+
+  btf.addGlobalFn('themeChange', changeGiscusTheme, 'giscus')
+
+  if ('Giscus' === 'Giscus' || !true) {
+    if (true) btf.loadComment(document.getElementById('giscus-wrap'), loadGiscus)
+    else loadGiscus()
+  } else {
+    window.loadOtherComment= loadGiscus
+  }
+})()</script></div><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">Search</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span> Loading the Database</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="Search for Posts" type="text"></div></div><hr><div id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="/js/search/local-search.js"></script></div></div></body></html>

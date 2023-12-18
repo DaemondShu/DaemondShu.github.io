@@ -1,0 +1,218 @@
+<!DOCTYPE html><html lang="en" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>LevelDB 和 RocksDB 结构详解 | Daemon.D.Blog</title><meta name="author" content="DaemondShu"><meta name="copyright" content="DaemondShu"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="阅读本文之前建议对LSM树有一定的认识。本文将介绍LSM Tree的主流实现，即LevelDB和RocksDB作为KV数据库。 两者对外提供的主要接口基本一致，就是包含以下5个基本操作  get(K) 查找key K对应的value put(K,V) 插入键值对（K，V） update(K,V) 查找key K对应的value更新为V delete(K) 删除key K对应的条目 scan(K1,"><meta property="og:type" content="article"><meta property="og:title" content="LevelDB 和 RocksDB 结构详解"><meta property="og:url" content="http://daemondshu.github.io/2020/07/21/Storage/Database/LevelDB_RocksDB/index.html"><meta property="og:site_name" content="Daemon.D.Blog"><meta property="og:description" content="阅读本文之前建议对LSM树有一定的认识。本文将介绍LSM Tree的主流实现，即LevelDB和RocksDB作为KV数据库。 两者对外提供的主要接口基本一致，就是包含以下5个基本操作  get(K) 查找key K对应的value put(K,V) 插入键值对（K，V） update(K,V) 查找key K对应的value更新为V delete(K) 删除key K对应的条目 scan(K1,"><meta property="og:locale" content="en_US"><meta property="og:image" content="http://daemondshu.github.io/images/bg/next_size.png"><meta property="article:published_time" content="2020-07-20T16:00:00.000Z"><meta property="article:modified_time" content="2020-07-20T16:00:00.000Z"><meta property="article:author" content="DaemondShu"><meta name="twitter:card" content="summary"><meta name="twitter:image" content="http://daemondshu.github.io/images/bg/next_size.png"><link rel="shortcut icon" href="/images/logo/favicon-32x32.png"><link rel="canonical" href="http://daemondshu.github.io/2020/07/21/Storage/Database/LevelDB_RocksDB/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload='this.media="all"'><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.min.css" media="print" onload='this.media="all"'><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: 'Copy Successful',
+    error: 'Copy Error',
+    noSupport: 'Browser Not Supported'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: 'Just now',
+    min: 'minutes ago',
+    hour: 'hours ago',
+    day: 'days ago',
+    month: 'months ago'
+  },
+  copyright: {"limitCount":50,"languages":{"author":"Author: DaemondShu","link":"Link: ","source":"Source: Daemon.D.Blog","info":"Copyright is owned by the author. For commercial reprints, please contact the author for authorization. For non-commercial reprints, please indicate the source."}},
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: 'Load More'
+  },
+  isPhotoFigcaption: false,
+  islazyload: true,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE={title:"LevelDB 和 RocksDB 结构详解",isPost:!0,isHome:!1,isHighlightShrink:!1,isToc:!0,postUpdate:"2020-07-21 00:00:00"}</script><script>(win=>{
+      win.saveToLocal = {
+        set: (key, value, ttl) => {
+          if (ttl === 0) return
+          const now = Date.now()
+          const expiry = now + ttl * 86400000
+          const item = {
+            value,
+            expiry
+          }
+          localStorage.setItem(key, JSON.stringify(item))
+        },
+      
+        get: key => {
+          const itemStr = localStorage.getItem(key)
+      
+          if (!itemStr) {
+            return undefined
+          }
+          const item = JSON.parse(itemStr)
+          const now = Date.now()
+      
+          if (now > item.expiry) {
+            localStorage.removeItem(key)
+            return undefined
+          }
+          return item.value
+        }
+      }
+    
+      win.getScript = (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        script.onerror = reject
+        script.onload = script.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          script.onload = script.onreadystatechange = null
+          resolve()
+        }
+
+        Object.keys(attr).forEach(key => {
+          script.setAttribute(key, attr[key])
+        })
+
+        document.head.appendChild(script)
+      })
+    
+      win.getCSS = (url, id = false) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onerror = reject
+        link.onload = link.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          link.onload = link.onreadystatechange = null
+          resolve()
+        }
+        document.head.appendChild(link)
+      })
+    
+      win.activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+        if (t === 'dark') activateDarkMode()
+        else if (t === 'light') activateLightMode()
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+      const detectApple = () => {
+        if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+          document.documentElement.classList.add('apple')
+        }
+      }
+      detectApple()
+    })(window)</script><link rel="stylesheet" href="/css/butterfly_common.css"><meta name="generator" content="Hexo 6.3.0"></head><body><div id="web_bg"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/images/user_256px.jpg" onerror='onerror=null,src="/img/friend_404.gif"' alt="avatar"></div><div class="sidebar-site-data site-data is-center"><a href="/archives/"><div class="headline">Articles</div><div class="length-num">24</div></a><a href="/tags/"><div class="headline">Tags</div><div class="length-num">1</div></a><a href="/categories/"><div class="headline">Categories</div><div class="length-num">12</div></a></div><hr class="custom-hr"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="not-top-img" id="page-header"><nav id="nav"><span id="blog-info"><a href="/" title="Daemon.D.Blog"><span class="site-name">Daemon.D.Blog</span></a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search" href="javascript:void(0);"><i class="fas fa-search fa-fw"></i><span> Search</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div></div><div id="toggle-menu"><a class="site-page" href="javascript:void(0);"><i class="fas fa-bars fa-fw"></i></a></div></div></nav></header><main class="layout" id="content-inner"><div id="post"><div id="post-info"><h1 class="post-title">LevelDB 和 RocksDB 结构详解</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">Created</span><time class="post-meta-date-created" datetime="2020-07-20T16:00:00.000Z" title="Created 2020-07-21 00:00:00">2020-07-21</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">Updated</span><time class="post-meta-date-updated" datetime="2020-07-20T16:00:00.000Z" title="Updated 2020-07-21 00:00:00">2020-07-21</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Storage/">Storage</a><i class="fas fa-angle-right post-meta-separator"></i><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Storage/Database/">Database</a></span></div><div class="meta-secondline"></div></div></div><article class="post-content" id="article-container"><p>阅读本文之前建议对LSM树有一定的认识。本文将介绍LSM Tree的主流实现，即LevelDB和RocksDB作为KV数据库。</p><p>两者对外提供的主要接口基本一致，就是包含以下5个基本操作</p><ul><li>get(K) 查找key K对应的value</li><li>put(K,V) 插入键值对（K，V）</li><li>update(K,V) 查找key K对应的value更新为V</li><li>delete(K) 删除key K对应的条目</li><li>scan(K1,K2) 得到从K1到K2的所有key和value</li></ul><p>我们将从静态和动态角度去介绍两个数据库<br>先从LevelDB开始，相对好理解。毕竟RocksDB是在levelDB上做的改进</p><h1 id="LeveldDB"><a href="#LeveldDB" class="headerlink" title="LeveldDB"></a>LeveldDB</h1><p>接下从静态和动态角度去介绍</p><blockquote><p>静态视角：假想整个系统正在运行过程中（不断插入删除读取数据），此时我们给LevelDb照相，从照片可以看到之前系统的数据在内存和磁盘中是如何分布的，处于什么状态等.<br>动态视角：了解系统是如何写入一条记录，读出一条记录，删除一条记录的，同时也包括除了这些接口操作外的内部操作比如compaction，系统运行时崩溃后如何恢复系统等等方面。</p></blockquote><h2 id="架构-静态视角"><a href="#架构-静态视角" class="headerlink" title="架构 - 静态视角"></a>架构 - 静态视角</h2><p><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/2020/07/21/Storage/Database/LevelDB_RocksDB/leveldb_str.png" loading="lazy"></p><h3 id="内存-（对应LSM的C0）"><a href="#内存-（对应LSM的C0）" class="headerlink" title="内存 （对应LSM的C0）"></a>内存 （对应LSM的C0）</h3><ul><li><p>memtable</p><ul><li>结构：<strong>SKIPLIST</strong> ， 和immutable memtable 完全相同。</li><li>读写：允许读写</li><li>功能：当Memtable写入的数据占用内存到达指定数量，则自动转换为Immutable Memtable，等待Dump到磁盘中，系统会自动生成新的Memtable供写操作写入新数据</li><li>删除：并不存在真正的删除操作,删除某个Key的Value在Memtable内是作为插入一条记录实施的，但是会打上一个Key的删除标记，真正的删除操作是Lazy的，会在以后的Compaction过程中去掉这个KV</li><li>重启时：会从log中恢复。</li></ul></li><li><p>immutable memtable</p><ul><li>正在进行写入磁盘操作的memtable</li></ul></li></ul><h3 id="磁盘中"><a href="#磁盘中" class="headerlink" title="磁盘中"></a>磁盘中</h3><ul><li><p>log(WAL)</p><ul><li>属于write-ahead-log，每个写入操作，都会往log尾部添加一个完整的kv记录</li><li>主作用是故障恢复，可以用于恢复memtable和immutable memtable</li></ul></li><li><p>current<br>current指出当前有效的那个manifest是哪个<br>随着Compaction进行，sstable变化，manifest会记录这些变化</p></li><li><p>manifest<br>记载sst各文件的信息(LEVEL, NAME, MIN_KEY, MAX_KEY)<br><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/2020/07/21/Storage/Database/LevelDB_RocksDB/manifest.png" loading="lazy"></p></li><li><p>SST文件（Semi-sort table） （<strong>对应LSM的C1-N</strong>）</p><ul><li>文件中key有序存储，存储一个范围(K1,K2)之间的键值对</li><li>Level 0的 SST之间可能存在key重叠 ， Level 1+ 的SST不会有key重叠</li><li>所有文件是一种层级结构，第一层为Level 0，第二层为Level 1，层级逐渐增高，每一层的容量也会增大，这也是称为LevelDB的原因。这level的设计上LevelDB和RocksDB完全一致。其大小关系往往是每个级别差10倍，如下图：<br><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/2020/07/21/Storage/Database/LevelDB_RocksDB/rocksdb_level.png" loading="lazy"></li></ul></li></ul><h3 id="SST文件-对应LSM的C1-N"><a href="#SST文件-对应LSM的C1-N" class="headerlink" title="SST文件 (对应LSM的C1-N)"></a>SST文件 (对应LSM的C1-N)</h3><h4 id="物理布局"><a href="#物理布局" class="headerlink" title="物理布局"></a>物理布局</h4><p><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/2020/07/21/Storage/Database/LevelDB_RocksDB/leveldb_sst_phy.png" loading="lazy"></p><h4 id="逻辑结构"><a href="#逻辑结构" class="headerlink" title="逻辑结构"></a>逻辑结构</h4><p><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/2020/07/21/Storage/Database/LevelDB_RocksDB/leveldb_sst_logic.png" loading="lazy"></p><h5 id="数据存储区"><a href="#数据存储区" class="headerlink" title="数据存储区"></a>数据存储区</h5><p>存储实际的key-value，<strong>单个</strong>block里面内容如下<br><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/2020/07/21/Storage/Database/LevelDB_RocksDB/LSM_data_block.png" loading="lazy"></p><p>“重启点”（Restart Point）, 其实是一些指针，<strong>为了降低数据冗余</strong> 指出Block内容中的一些记录位置。在这条记录开始，不再采取只记载不同的Key部分，而是重新记录所有的Key值。<br><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/2020/07/21/Storage/Database/LevelDB_RocksDB/leveldb_restart.png" loading="lazy"></p><h5 id="数据管理区"><a href="#数据管理区" class="headerlink" title="数据管理区"></a>数据管理区</h5><ul><li>meta block ：记录这个SST文件的一些元信息，比如record个数，数据大小等</li><li>footer ： 指向（索引）index block的index</li><li><strong>index block</strong>： 指向data block在文件中的地址，用于查找数据在哪个block内<br><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/2020/07/21/Storage/Database/LevelDB_RocksDB/leveldb_index_block.png" loading="lazy"></li></ul><h2 id="操作-动态视角"><a href="#操作-动态视角" class="headerlink" title="操作 - 动态视角"></a>操作 - 动态视角</h2><h3 id="写-插入、-更新、删除数据"><a href="#写-插入、-更新、删除数据" class="headerlink" title="写 - 插入、 更新、删除数据"></a>写 - 插入、 更新、删除数据</h3><ul><li>插入： 同步操作就是（决定延迟），就是先顺序写入log（内部无序），然后写入memtable。 异步写入后续就是要看compaction。</li><li>更新： 当做插入处理。</li><li>删除： 不是直接删除，而是加入了一个删除标记</li></ul><h4 id="compaction"><a href="#compaction" class="headerlink" title="compaction"></a>compaction</h4><p>目的： 完成数据的沉降，同时由于之前的插入、删除操作，数据有很多的冗余。压缩，然后删除掉一些不再有效的KV数据，减小数据规模，减少文件数。</p><h5 id="flush-Memtable-gt-LEVEL0"><a href="#flush-Memtable-gt-LEVEL0" class="headerlink" title="flush (Memtable -&gt; LEVEL0)"></a>flush (Memtable -&gt; LEVEL0)</h5><ul><li>触发条件： memtable大小超过阈值</li><li>结果： 其过程就是把immutable memtable简单持久化一个新sst</li><li>过程：依次写入sst，然后新建索引（所以一个level 0 sst数据大小和immutable memtable是一样的）</li><li>注意： 因为不考虑其他sst，所以level0的sst 键会存在会重叠</li></ul><h5 id="compaction-Level-i-gt-Level-i-1"><a href="#compaction-Level-i-gt-Level-i-1" class="headerlink" title="compaction (Level i -&gt; Level i+1)"></a>compaction (Level i -&gt; Level i+1)</h5><p>就是按文件产生次序轮询，合并之后原文件就失效等待删除，新的文件生效（manifest记录）</p><ul><li>触发条件level i 大小或者文件个数超过阈值</li><li>过程: 以level i的一个文件为驱动，在 level i 找和level i+1 找存在key重叠的sst，然后滚动合并<ul><li>当i是0时，因为leveli文件之间存在重叠，所以是leveli和leveli+1的多个文件一起合并。</li><li>当i是1时，当因为leveli的sst之间没有重叠，所以就是一个leveli的文件和多个L+1合并</li></ul></li><li>结果图示(i&gt;&#x3D;1情况)：<br><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/2020/07/21/Storage/Database/LevelDB_RocksDB/compaction.png" loading="lazy"></li><li>合并过程图示（即一个多路归并排序,图中L代表leveli的文件，L+1代表leveli+1的文件）：<br><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/2020/07/21/Storage/Database/LevelDB_RocksDB/leveldb_merge.png" loading="lazy"></li></ul><h4 id="读"><a href="#读" class="headerlink" title="读"></a>读</h4><p>先内存后磁盘，硬盘从上层至下层。（找到数据就返回，因为level小的里面的记录肯定是最新的）<br>先在memtable里面找，如果找不到则从磁盘文件中，对于磁盘上的每一个level，查找有三级：</p><ol><li>sst定位：优先新鲜(level小的)sst， 唯一特殊的就是level 0不同sst可能会有key重叠，所以要在manifest中找到符合条件的文件，按<strong>从新到旧的顺序</strong>依次查找。</li><li>sst内查找： 先看sst的索引是否已经加载到Cache， 没有就加载，然后定位block</li><li>block内查找：先在restart points上找，然后restart points之间顺序查找</li></ol><h5 id="缓存-Cache"><a href="#缓存-Cache" class="headerlink" title="缓存 Cache"></a>缓存 Cache</h5><p>为了加快查询，数据库都会将数据放入内存，来降低重复访问同一段数据带来的开销。<br>如：</p><ol><li>manifest内容存在缓存中</li><li>打开一个sst时，其索引块也会加载到缓存中</li><li>在一个block内查找时，也会将block加入到缓存</li></ol><h1 id="RocksDB"><a href="#RocksDB" class="headerlink" title="RocksDB"></a>RocksDB</h1><p>结构和levelDB大同小异，只是多了一些改进</p><ol><li>增加了column family，有了列簇的概念，可把一些相关的key存储在一起</li><li>内存中有多个immute memtalbe，可防止Leveldb中的 write stall</li><li>可支持多线程同时compation，理论上多线程同时comaption会比一个线程compation要快（TODO执行commpactiron的中心在哪）</li><li>支持TTL</li><li>flush与compation分开不同的线程池来调度，并具有不同的优先级，flush要优于compation，这样可以加快flush，防止stall</li><li>对SSD存储做了优化，可以以in-memory方式运行</li><li>增加了对 write ahead log（WAL）的管理机制，更方便管理WAL，WAL是binlog文件</li><li>支持多种不同的compaction策略</li></ol><h2 id="结构"><a href="#结构" class="headerlink" title="结构"></a>结构</h2><p><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/2020/07/21/Storage/Database/LevelDB_RocksDB/rocksdb_str.png" loading="lazy"></p><h1 id="特性"><a href="#特性" class="headerlink" title="特性"></a>特性</h1><p>同LSM Tree，唯一区别在于每一层分成了多个文件。</p><ul><li>优点：<ul><li>写延迟低</li><li>访问新数据更快，适合时序、实时存储</li><li>空间放大率低</li></ul></li><li>缺点：<ul><li>写放大、读放大高</li><li>读放大</li><li>磁盘上修改数据的粒度必须是文件</li></ul></li></ul></article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>Author: </span><span class="post-copyright-info"><a href="http://daemondshu.github.io">DaemondShu</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>Link: </span><span class="post-copyright-info"><a href="http://daemondshu.github.io/2020/07/21/Storage/Database/LevelDB_RocksDB/">http://daemondshu.github.io/2020/07/21/Storage/Database/LevelDB_RocksDB/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>Copyright Notice: </span><span class="post-copyright-info">All articles in this blog are licensed under <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> unless stating additionally.</span></div></div><div class="tag_share"><div class="post-meta__tag-list"></div><div class="post_share"><div class="social-share" data-image="/images/bg/next_size.png" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload='this.media="all"'><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/2021/04/05/Storage/Database/Database_Transaction/" title="Database Transaction - ACID &amp; Isolation Level"><img class="cover" src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/images/bg/next_size.png" onerror='onerror=null,src="/img/404.jpg"' alt="cover of previous post"><div class="pagination-info"><div class="label">Previous</div><div class="prev_info">Database Transaction - ACID &amp; Isolation Level</div></div></a></div><div class="next-post pull-right"><a href="/2020/03/10/System%20Design/Network/RSA_PKI_encrypt/" title="非对称加密之PKI体系"><img class="cover" src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/images/bg/next_size.png" onerror='onerror=null,src="/img/404.jpg"' alt="cover of next post"><div class="pagination-info"><div class="label">Next</div><div class="next_info">非对称加密之PKI体系</div></div></a></div></nav><hr class="custom-hr"><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> Comment</span></div></div><div class="comment-wrap"><div><div id="giscus-wrap"></div></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/images/user_256px.jpg" onerror='this.onerror=null,this.src="/img/friend_404.gif"' alt="avatar"></div><div class="author-info__name">DaemondShu</div><div class="author-info__description"></div></div><div class="card-info-data site-data is-center"><a href="/archives/"><div class="headline">Articles</div><div class="length-num">24</div></a><a href="/tags/"><div class="headline">Tags</div><div class="length-num">1</div></a><a href="/categories/"><div class="headline">Categories</div><div class="length-num">12</div></a></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>Contents</span><span class="toc-percentage"></span></div><div class="toc-content is-expand"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#LeveldDB"><span class="toc-number">1.</span> <span class="toc-text">LeveldDB</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%9E%B6%E6%9E%84-%E9%9D%99%E6%80%81%E8%A7%86%E8%A7%92"><span class="toc-number">1.1.</span> <span class="toc-text">架构 - 静态视角</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%86%85%E5%AD%98-%EF%BC%88%E5%AF%B9%E5%BA%94LSM%E7%9A%84C0%EF%BC%89"><span class="toc-number">1.1.1.</span> <span class="toc-text">内存 （对应LSM的C0）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%A3%81%E7%9B%98%E4%B8%AD"><span class="toc-number">1.1.2.</span> <span class="toc-text">磁盘中</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#SST%E6%96%87%E4%BB%B6-%E5%AF%B9%E5%BA%94LSM%E7%9A%84C1-N"><span class="toc-number">1.1.3.</span> <span class="toc-text">SST文件 (对应LSM的C1-N)</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E7%89%A9%E7%90%86%E5%B8%83%E5%B1%80"><span class="toc-number">1.1.3.1.</span> <span class="toc-text">物理布局</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E9%80%BB%E8%BE%91%E7%BB%93%E6%9E%84"><span class="toc-number">1.1.3.2.</span> <span class="toc-text">逻辑结构</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#%E6%95%B0%E6%8D%AE%E5%AD%98%E5%82%A8%E5%8C%BA"><span class="toc-number">1.1.3.2.1.</span> <span class="toc-text">数据存储区</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#%E6%95%B0%E6%8D%AE%E7%AE%A1%E7%90%86%E5%8C%BA"><span class="toc-number">1.1.3.2.2.</span> <span class="toc-text">数据管理区</span></a></li></ol></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%93%8D%E4%BD%9C-%E5%8A%A8%E6%80%81%E8%A7%86%E8%A7%92"><span class="toc-number">1.2.</span> <span class="toc-text">操作 - 动态视角</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%86%99-%E6%8F%92%E5%85%A5%E3%80%81-%E6%9B%B4%E6%96%B0%E3%80%81%E5%88%A0%E9%99%A4%E6%95%B0%E6%8D%AE"><span class="toc-number">1.2.1.</span> <span class="toc-text">写 - 插入、 更新、删除数据</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#compaction"><span class="toc-number">1.2.1.1.</span> <span class="toc-text">compaction</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#flush-Memtable-gt-LEVEL0"><span class="toc-number">1.2.1.1.1.</span> <span class="toc-text">flush (Memtable -&gt; LEVEL0)</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#compaction-Level-i-gt-Level-i-1"><span class="toc-number">1.2.1.1.2.</span> <span class="toc-text">compaction (Level i -&gt; Level i+1)</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E8%AF%BB"><span class="toc-number">1.2.1.2.</span> <span class="toc-text">读</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#%E7%BC%93%E5%AD%98-Cache"><span class="toc-number">1.2.1.2.1.</span> <span class="toc-text">缓存 Cache</span></a></li></ol></li></ol></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#RocksDB"><span class="toc-number">2.</span> <span class="toc-text">RocksDB</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%BB%93%E6%9E%84"><span class="toc-number">2.1.</span> <span class="toc-text">结构</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E7%89%B9%E6%80%A7"><span class="toc-number">3.</span> <span class="toc-text">特性</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>Recent Post</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2022/10/16/System%20Design/Distributed%20System/consistency_model/" title="Consistency Model Summary in Distributed System">Consistency Model Summary in Distributed System</a><time datetime="2022-10-15T16:00:00.000Z" title="Updated 2022-10-16 00:00:00">2022-10-16</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2022/05/21/Programming/Java/ModernGC/" title="JVM GC(2) | Modern Garbage Collectors - CMS, G1, ZGC, Shenandoah GC">JVM GC(2) | Modern Garbage Collectors - CMS, G1, ZGC, Shenandoah GC</a><time datetime="2022-05-20T16:00:00.000Z" title="Updated 2022-05-21 00:00:00">2022-05-21</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2022/02/20/System%20Design/Distributed%20System/cache_overview/" title="Get Started with Cache">Get Started with Cache</a><time datetime="2022-02-19T16:00:00.000Z" title="Updated 2022-02-20 00:00:00">2022-02-20</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2021/08/20/System%20Design/Distributed%20System/distributed_transcation/" title="Distributed Transaction - 2PC, 3PC">Distributed Transaction - 2PC, 3PC</a><time datetime="2021-08-19T16:00:00.000Z" title="Updated 2021-08-20 00:00:00">2021-08-20</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2021/04/05/Storage/Database/Database_Transaction/" title="Database Transaction - ACID &amp; Isolation Level">Database Transaction - ACID &amp; Isolation Level</a><time datetime="2021-06-09T16:00:00.000Z" title="Updated 2021-06-10 00:00:00">2021-06-10</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2016 - 2023 By DaemondShu</div><div class="framework-info"><span>Framework </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>Theme </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="Read Mode"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="Toggle Between Light And Dark Mode"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="Toggle between Single-column and Double-column"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="Setting"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="Table Of Contents"><i class="fas fa-list-ul"></i></button><a id="to_comment" href="#post-comment" title="Scroll To Comments"><i class="fas fa-comments"></i></a><button id="go-up" type="button" title="Back To Top"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.umd.min.js"></script><script src="https://cdn.jsdelivr.net/npm/vanilla-lazyload/dist/lazyload.iife.min.js"></script><div class="js-pjax"><script>if (!window.MathJax) {
+  window.MathJax = {
+    tex: {
+      inlineMath: [['$', '$'], ['\\(', '\\)']],
+      tags: 'ams'
+    },
+    chtml: {
+      scale: 1.1
+    },
+    options: {
+      renderActions: {
+        findScript: [10, doc => {
+          for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+            const display = !!node.type.match(/; *mode=display/)
+            const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+            const text = document.createTextNode('')
+            node.parentNode.replaceChild(text, node)
+            math.start = {node: text, delim: '', n: 0}
+            math.end = {node: text, delim: '', n: 0}
+            doc.math.push(math)
+          }
+        }, '']
+      }
+    }
+  }
+  
+  const script = document.createElement('script')
+  script.src = 'https://cdn.jsdelivr.net/npm/mathjax/es5/tex-mml-chtml.min.js'
+  script.id = 'MathJax-script'
+  script.async = true
+  document.head.appendChild(script)
+} else {
+  MathJax.startup.document.state(0)
+  MathJax.texReset()
+  MathJax.typesetPromise()
+}</script><script>(()=>{
+  const getGiscusTheme = theme => {
+    return theme === 'dark' ? 'dark' : 'light'
+  }
+
+  const loadGiscus = () => {
+    const config = Object.assign({
+      src: 'https://giscus.app/client.js',
+      'data-repo': 'DaemondShu/DaemondShu.github.io',
+      'data-repo-id': 'MDEwOlJlcG9zaXRvcnkxNzYxMjUzNDI=',
+      'data-category-id': 'DIC_kwDOCn91ns4CTWjW',
+      'data-mapping': 'pathname',
+      'data-theme': getGiscusTheme(document.documentElement.getAttribute('data-theme')),
+      'data-reactions-enabled': '1',
+      crossorigin: 'anonymous',
+      async: true
+    },null)
+
+    const ele = document.createElement('script')
+    for (let key in config) {
+      ele.setAttribute(key, config[key])
+    }
+    document.getElementById('giscus-wrap').appendChild(ele)
+  }
+
+  const changeGiscusTheme = theme => {
+    const sendMessage = message => {
+      const iframe = document.querySelector('iframe.giscus-frame')
+      if (!iframe) return
+      iframe.contentWindow.postMessage({ giscus: message }, 'https://giscus.app')
+    }
+
+    sendMessage({
+      setConfig: {
+        theme: getGiscusTheme(theme)
+      }
+    });
+  }
+
+  btf.addGlobalFn('themeChange', changeGiscusTheme, 'giscus')
+
+  if ('Giscus' === 'Giscus' || !true) {
+    if (true) btf.loadComment(document.getElementById('giscus-wrap'), loadGiscus)
+    else loadGiscus()
+  } else {
+    window.loadOtherComment= loadGiscus
+  }
+})()</script></div><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">Search</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span> Loading the Database</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="Search for Posts" type="text"></div></div><hr><div id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="/js/search/local-search.js"></script></div></div></body></html>

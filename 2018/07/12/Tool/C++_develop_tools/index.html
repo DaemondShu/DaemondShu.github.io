@@ -1,0 +1,218 @@
+<!DOCTYPE html><html lang="en" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>C/C++ Optimization Tools | Daemon.D.Blog</title><meta name="author" content="DaemondShu"><meta name="copyright" content="DaemondShu"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="Here&#39;s something encrypted, password is required to continue reading."><meta property="og:type" content="article"><meta property="og:title" content="C&#x2F;C++ Optimization Tools"><meta property="og:url" content="http://daemondshu.github.io/2018/07/12/Tool/C++_develop_tools/index.html"><meta property="og:site_name" content="Daemon.D.Blog"><meta property="og:description" content="Here&#39;s something encrypted, password is required to continue reading."><meta property="og:locale" content="en_US"><meta property="og:image" content="http://daemondshu.github.io/images/bg/next_size.png"><meta property="article:published_time" content="2018-07-11T16:00:00.000Z"><meta property="article:modified_time" content="2018-07-11T16:00:00.000Z"><meta property="article:author" content="DaemondShu"><meta name="twitter:card" content="summary"><meta name="twitter:image" content="http://daemondshu.github.io/images/bg/next_size.png"><link rel="shortcut icon" href="/images/logo/favicon-32x32.png"><link rel="canonical" href="http://daemondshu.github.io/2018/07/12/Tool/C++_develop_tools/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload='this.media="all"'><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.min.css" media="print" onload='this.media="all"'><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: 'Copy Successful',
+    error: 'Copy Error',
+    noSupport: 'Browser Not Supported'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: 'Just now',
+    min: 'minutes ago',
+    hour: 'hours ago',
+    day: 'days ago',
+    month: 'months ago'
+  },
+  copyright: {"limitCount":50,"languages":{"author":"Author: DaemondShu","link":"Link: ","source":"Source: Daemon.D.Blog","info":"Copyright is owned by the author. For commercial reprints, please contact the author for authorization. For non-commercial reprints, please indicate the source."}},
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: 'Load More'
+  },
+  isPhotoFigcaption: false,
+  islazyload: true,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE={title:"C/C++ Optimization Tools",isPost:!0,isHome:!1,isHighlightShrink:!1,isToc:!0,postUpdate:"2018-07-12 00:00:00"}</script><script>(win=>{
+      win.saveToLocal = {
+        set: (key, value, ttl) => {
+          if (ttl === 0) return
+          const now = Date.now()
+          const expiry = now + ttl * 86400000
+          const item = {
+            value,
+            expiry
+          }
+          localStorage.setItem(key, JSON.stringify(item))
+        },
+      
+        get: key => {
+          const itemStr = localStorage.getItem(key)
+      
+          if (!itemStr) {
+            return undefined
+          }
+          const item = JSON.parse(itemStr)
+          const now = Date.now()
+      
+          if (now > item.expiry) {
+            localStorage.removeItem(key)
+            return undefined
+          }
+          return item.value
+        }
+      }
+    
+      win.getScript = (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        script.onerror = reject
+        script.onload = script.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          script.onload = script.onreadystatechange = null
+          resolve()
+        }
+
+        Object.keys(attr).forEach(key => {
+          script.setAttribute(key, attr[key])
+        })
+
+        document.head.appendChild(script)
+      })
+    
+      win.getCSS = (url, id = false) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onerror = reject
+        link.onload = link.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          link.onload = link.onreadystatechange = null
+          resolve()
+        }
+        document.head.appendChild(link)
+      })
+    
+      win.activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+        if (t === 'dark') activateDarkMode()
+        else if (t === 'light') activateLightMode()
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+      const detectApple = () => {
+        if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+          document.documentElement.classList.add('apple')
+        }
+      }
+      detectApple()
+    })(window)</script><link rel="stylesheet" href="/css/butterfly_common.css"><meta name="generator" content="Hexo 6.3.0"></head><body><div id="web_bg"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/images/user_256px.jpg" onerror='onerror=null,src="/img/friend_404.gif"' alt="avatar"></div><div class="sidebar-site-data site-data is-center"><a href="/archives/"><div class="headline">Articles</div><div class="length-num">24</div></a><a href="/tags/"><div class="headline">Tags</div><div class="length-num">1</div></a><a href="/categories/"><div class="headline">Categories</div><div class="length-num">12</div></a></div><hr class="custom-hr"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="not-top-img" id="page-header"><nav id="nav"><span id="blog-info"><a href="/" title="Daemon.D.Blog"><span class="site-name">Daemon.D.Blog</span></a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search" href="javascript:void(0);"><i class="fas fa-search fa-fw"></i><span> Search</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div></div><div id="toggle-menu"><a class="site-page" href="javascript:void(0);"><i class="fas fa-bars fa-fw"></i></a></div></div></nav></header><main class="layout" id="content-inner"><div id="post"><div id="post-info"><h1 class="post-title">C/C++ Optimization Tools</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">Created</span><time class="post-meta-date-created" datetime="2018-07-11T16:00:00.000Z" title="Created 2018-07-12 00:00:00">2018-07-12</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">Updated</span><time class="post-meta-date-updated" datetime="2018-07-11T16:00:00.000Z" title="Updated 2018-07-12 00:00:00">2018-07-12</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Tool/">Tool</a></span></div><div class="meta-secondline"></div></div></div><article class="post-content" id="article-container"><div class="hbe hbe-container" id="hexo-blog-encrypt" data-wpm="Oh, this is an invalid password. Check and try again, please." data-whm="OOPS, these decrypted content may changed, but you can still have a look."><script id="hbeData" type="hbeData" data-hmacdigest="3fd51de59615cf3d055867c7adf8c3bb0aa9df0e908e4be6b20de83cc17ba661">a1d442672885495a31a2ae2fad6179bb288cea116d9f743927f59cabddf46f5273a8f2079bec792c7212721455e9d01abeab67f96fa082f772ddb3bb6989e8cc66945d5fe6b4a1434d4e5934496536df9373ec34e40f78e8f5f33ff28ed2556a388d48d40bf86e683d3bd2b540543f8b31957c302769adf33a369fd51d346da89775a71470ffa0c4d8510b3e71a124274e04461e852e3a003b89adb51362adc519fb2fb1d61ce3b857c7a9243ef480695235c43f86b2fe742139c6ebcb25881cb1fe0f52ac3019a30a6ffb774dc28bf1f946d1ed0c1bcf0007557aad12f6b7603f0d7bae5f6ed69521643aaec5f324e34b6abfac7e7072dd2c5c4dde7a459ad68a66208e70569e5a90763771cfdb53643663699b2587bb0ccce74db0b767ad84c7a27d20544ef3c498242944d9faef7d7cbe93ef2b65c1dbb6518e747b1965e37f85d37b776022f86bcf66f4ec7f5530c614963b5fe75a60cf6010cffb63534daad03d6741523300082ab03b56f15504d743c5e3dbf241b2d0a5bda849c9b1fc2b27b731a1d0f57a1bcb3fd026bed5e9464b8fa514b892bd7974a12d57f11746be42dd09e9c6cdb5524f0697d4e6c21386b41a425eb056f09751e9463f6c061c85f4578b5077a973dc759ae0a9313a747002e46a2a4bce4dacca64b9f9c940395750919ff9294abce6e1a9b6d7b60362c3624a1fa0c9c06f09ab224aa13cce30407a5386df5addb148cd7455a45856fa9b22f1c1e3ed8738ef8e29ecef620353bf8fb55973503b5a2aca21120ffec01aa0e2034829cc6fc253e374599ed1fe44aef9369e5833670db5f3aeedf13126b39e8c4c5324568407179852cb956aa13fbb02d871cb8a1c6c35496a537adfa00aeb100bcf417ca08cb51019ece8609be9e4a728db5b6205b5f8be53b92ec53c9e99f2d612d4a9e65068db12b82be18b8f482e91ec989dbe41066c252a8a1c6e3ebd6e6f219dfe4287a472e96473e5a4fa41464026ecea21e188c9b6272c60d3e849087ab949c08de3b2348d6089b7ec9bdce4615c94cd928feaf26ae1292fef29f17da6e35905ba0f6577a6cf1319fbcf80f76aefbf77533e45a04692ac232cf4e65db81cb3e4974b5c63ccadcde5d02794f61b222dcd1d055599f4adef8d8d32dd2983b4efe2380040f05ec36f5fc2d78b7897ff8d29fd1ee85fbcd5c0e98998567aaf6d4f5281a20ac5c6ed1607ce468b3d54d59cfbfcded83dafcda866443135825060dcddd73a52e006cecfef6f28d233883f82dd948e932306c713ba74008102a5d6441f08bc0b09776300e8efa2f0fbce4f2ee8f71fb63273391d036907681302ca3a8d03d64b1c141ae06ef39a52a6cdc93af694ba5082129d21a2d65a3bc7984a6dd78ffa05ff256366c75e22074467b5d60eb323253bd486080eb7cd519fd183651ac3c6c89087592d75e5237e416174b6cdc80737426bc0f536e3c2a981326a4bf2b7258606504de0c9c124dde914091236a8e169ce5afbf3ba3efd51025607fdc2a774ab92e60d630ac9ff235981c4c8d49a65c040a5d84cce15eed88ce9d7b10a61b7494e969f6163280b30e2d1ba9b1e0471a6272ac669313206b5546153ba234286a3a6d898912ca0a55ae224dc91675504ad48f98d2a82c941af70658456dd212cb509f21459bf2d1ff5b2c22b49a8fb39c74afdcce3c8304998793b7c6fa1b0c29b596b1d4a90206446e8a9118b90f7ca95b7c9e1e2f12c14e68c66a2a21f287a7d52b84d8b302a965c1ce46cba9254fd8cb7bc9d3b2a08ea80497a68a6357471e4267b864f0771461fa814ddce55ab3705da18d5f696223024f08ef6b9b5f230a47051bb047ec1f110556f5f100f5f605e0e46a20efa575f88cc76884d6fba91b519c3af7415740c773a2af82112ba832c98931d1dce1f14</script><div class="hbe hbe-content"><div class="hbe hbe-input hbe-input-default"><input class="hbe hbe-input-field hbe-input-field-default" type="password" id="hbePass"> <label class="hbe hbe-input-label hbe-input-label-default" for="hbePass"><span class="hbe hbe-input-label-content hbe-input-label-content-default">Hey, password is required here.</span></label></div></div></div><script data-pjax src="/lib/hbe.js"></script><link href="/css/hbe.style.css" rel="stylesheet" type="text/css"></article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>Author: </span><span class="post-copyright-info"><a href="http://daemondshu.github.io">DaemondShu</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>Link: </span><span class="post-copyright-info"><a href="http://daemondshu.github.io/2018/07/12/Tool/C++_develop_tools/">http://daemondshu.github.io/2018/07/12/Tool/C++_develop_tools/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>Copyright Notice: </span><span class="post-copyright-info">All articles in this blog are licensed under <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> unless stating additionally.</span></div></div><div class="tag_share"><div class="post-meta__tag-list"></div><div class="post_share"><div class="social-share" data-image="/images/bg/next_size.png" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload='this.media="all"'><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/2018/12/10/System%20Design/Network/network_tcp/" title="Network TCP/UDP"><img class="cover" src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/images/bg/next_size.png" onerror='onerror=null,src="/img/404.jpg"' alt="cover of previous post"><div class="pagination-info"><div class="label">Previous</div><div class="prev_info">Network TCP/UDP</div></div></a></div><div class="next-post pull-right"><a href="/2018/04/20/Programming/C,C++/CPP_multithreading/" title="C/C++ Concurrency and Parallelism"><img class="cover" src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/images/bg/next_size.png" onerror='onerror=null,src="/img/404.jpg"' alt="cover of next post"><div class="pagination-info"><div class="label">Next</div><div class="next_info">C/C++ Concurrency and Parallelism</div></div></a></div></nav><hr class="custom-hr"><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> Comment</span></div></div><div class="comment-wrap"><div><div id="giscus-wrap"></div></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/images/user_256px.jpg" onerror='this.onerror=null,this.src="/img/friend_404.gif"' alt="avatar"></div><div class="author-info__name">DaemondShu</div><div class="author-info__description"></div></div><div class="card-info-data site-data is-center"><a href="/archives/"><div class="headline">Articles</div><div class="length-num">24</div></a><a href="/tags/"><div class="headline">Tags</div><div class="length-num">1</div></a><a href="/categories/"><div class="headline">Categories</div><div class="length-num">12</div></a></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>Contents</span><span class="toc-percentage"></span></div><div class="toc-content toc-div-class is-expand" style="display:none"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#Debug"><span class="toc-number">1.</span> <span class="toc-text">Debug</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Memory-Leak"><span class="toc-number">2.</span> <span class="toc-text">Memory Leak</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Profile"><span class="toc-number">3.</span> <span class="toc-text">Profile</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Cache-Miss"><span class="toc-number">4.</span> <span class="toc-text">Cache Miss</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Dead-Lock-Check"><span class="toc-number">5.</span> <span class="toc-text">Dead Lock Check</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>Recent Post</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2022/10/16/System%20Design/Distributed%20System/consistency_model/" title="Consistency Model Summary in Distributed System">Consistency Model Summary in Distributed System</a><time datetime="2022-10-15T16:00:00.000Z" title="Updated 2022-10-16 00:00:00">2022-10-16</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2022/05/21/Programming/Java/ModernGC/" title="JVM GC(2) | Modern Garbage Collectors - CMS, G1, ZGC, Shenandoah GC">JVM GC(2) | Modern Garbage Collectors - CMS, G1, ZGC, Shenandoah GC</a><time datetime="2022-05-20T16:00:00.000Z" title="Updated 2022-05-21 00:00:00">2022-05-21</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2022/02/20/System%20Design/Distributed%20System/cache_overview/" title="Get Started with Cache">Get Started with Cache</a><time datetime="2022-02-19T16:00:00.000Z" title="Updated 2022-02-20 00:00:00">2022-02-20</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2021/08/20/System%20Design/Distributed%20System/distributed_transcation/" title="Distributed Transaction - 2PC, 3PC">Distributed Transaction - 2PC, 3PC</a><time datetime="2021-08-19T16:00:00.000Z" title="Updated 2021-08-20 00:00:00">2021-08-20</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2021/04/05/Storage/Database/Database_Transaction/" title="Database Transaction - ACID &amp; Isolation Level">Database Transaction - ACID &amp; Isolation Level</a><time datetime="2021-06-09T16:00:00.000Z" title="Updated 2021-06-10 00:00:00">2021-06-10</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2016 - 2023 By DaemondShu</div><div class="framework-info"><span>Framework </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>Theme </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="Read Mode"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="Toggle Between Light And Dark Mode"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="Toggle between Single-column and Double-column"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="Setting"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="Table Of Contents"><i class="fas fa-list-ul"></i></button><a id="to_comment" href="#post-comment" title="Scroll To Comments"><i class="fas fa-comments"></i></a><button id="go-up" type="button" title="Back To Top"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.umd.min.js"></script><script src="https://cdn.jsdelivr.net/npm/vanilla-lazyload/dist/lazyload.iife.min.js"></script><div class="js-pjax"><script>if (!window.MathJax) {
+  window.MathJax = {
+    tex: {
+      inlineMath: [['$', '$'], ['\\(', '\\)']],
+      tags: 'ams'
+    },
+    chtml: {
+      scale: 1.1
+    },
+    options: {
+      renderActions: {
+        findScript: [10, doc => {
+          for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+            const display = !!node.type.match(/; *mode=display/)
+            const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+            const text = document.createTextNode('')
+            node.parentNode.replaceChild(text, node)
+            math.start = {node: text, delim: '', n: 0}
+            math.end = {node: text, delim: '', n: 0}
+            doc.math.push(math)
+          }
+        }, '']
+      }
+    }
+  }
+  
+  const script = document.createElement('script')
+  script.src = 'https://cdn.jsdelivr.net/npm/mathjax/es5/tex-mml-chtml.min.js'
+  script.id = 'MathJax-script'
+  script.async = true
+  document.head.appendChild(script)
+} else {
+  MathJax.startup.document.state(0)
+  MathJax.texReset()
+  MathJax.typesetPromise()
+}</script><script>(()=>{
+  const getGiscusTheme = theme => {
+    return theme === 'dark' ? 'dark' : 'light'
+  }
+
+  const loadGiscus = () => {
+    const config = Object.assign({
+      src: 'https://giscus.app/client.js',
+      'data-repo': 'DaemondShu/DaemondShu.github.io',
+      'data-repo-id': 'MDEwOlJlcG9zaXRvcnkxNzYxMjUzNDI=',
+      'data-category-id': 'DIC_kwDOCn91ns4CTWjW',
+      'data-mapping': 'pathname',
+      'data-theme': getGiscusTheme(document.documentElement.getAttribute('data-theme')),
+      'data-reactions-enabled': '1',
+      crossorigin: 'anonymous',
+      async: true
+    },null)
+
+    const ele = document.createElement('script')
+    for (let key in config) {
+      ele.setAttribute(key, config[key])
+    }
+    document.getElementById('giscus-wrap').appendChild(ele)
+  }
+
+  const changeGiscusTheme = theme => {
+    const sendMessage = message => {
+      const iframe = document.querySelector('iframe.giscus-frame')
+      if (!iframe) return
+      iframe.contentWindow.postMessage({ giscus: message }, 'https://giscus.app')
+    }
+
+    sendMessage({
+      setConfig: {
+        theme: getGiscusTheme(theme)
+      }
+    });
+  }
+
+  btf.addGlobalFn('themeChange', changeGiscusTheme, 'giscus')
+
+  if ('Giscus' === 'Giscus' || !true) {
+    if (true) btf.loadComment(document.getElementById('giscus-wrap'), loadGiscus)
+    else loadGiscus()
+  } else {
+    window.loadOtherComment= loadGiscus
+  }
+})()</script></div><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">Search</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span> Loading the Database</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="Search for Posts" type="text"></div></div><hr><div id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="/js/search/local-search.js"></script></div></div></body></html>

@@ -1,0 +1,218 @@
+<!DOCTYPE html><html lang="en" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Consistency in Distributed System - CAP、BASE | Daemon.D.Blog</title><meta name="author" content="DaemondShu"><meta name="copyright" content="DaemondShu"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="CAP Theorem常见的解释是三者最多只能两者相互满足，  C-Consistency: All nodes see the same data at the same time.  A-Availability:  Reads and writes always succeed  P-Partition tolerance: The system continues to operate d"><meta property="og:type" content="article"><meta property="og:title" content="Consistency in Distributed System - CAP、BASE"><meta property="og:url" content="http://daemondshu.github.io/2020/02/20/System%20Design/Distributed%20System/distributed_consitency/index.html"><meta property="og:site_name" content="Daemon.D.Blog"><meta property="og:description" content="CAP Theorem常见的解释是三者最多只能两者相互满足，  C-Consistency: All nodes see the same data at the same time.  A-Availability:  Reads and writes always succeed  P-Partition tolerance: The system continues to operate d"><meta property="og:locale" content="en_US"><meta property="og:image" content="http://daemondshu.github.io/images/bg/next_size.png"><meta property="article:published_time" content="2020-02-19T16:00:00.000Z"><meta property="article:modified_time" content="2020-02-19T16:00:00.000Z"><meta property="article:author" content="DaemondShu"><meta name="twitter:card" content="summary"><meta name="twitter:image" content="http://daemondshu.github.io/images/bg/next_size.png"><link rel="shortcut icon" href="/images/logo/favicon-32x32.png"><link rel="canonical" href="http://daemondshu.github.io/2020/02/20/System%20Design/Distributed%20System/distributed_consitency/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload='this.media="all"'><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.min.css" media="print" onload='this.media="all"'><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: 'Copy Successful',
+    error: 'Copy Error',
+    noSupport: 'Browser Not Supported'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: 'Just now',
+    min: 'minutes ago',
+    hour: 'hours ago',
+    day: 'days ago',
+    month: 'months ago'
+  },
+  copyright: {"limitCount":50,"languages":{"author":"Author: DaemondShu","link":"Link: ","source":"Source: Daemon.D.Blog","info":"Copyright is owned by the author. For commercial reprints, please contact the author for authorization. For non-commercial reprints, please indicate the source."}},
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: 'Load More'
+  },
+  isPhotoFigcaption: false,
+  islazyload: true,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE={title:"Consistency in Distributed System - CAP、BASE",isPost:!0,isHome:!1,isHighlightShrink:!1,isToc:!0,postUpdate:"2020-02-20 00:00:00"}</script><script>(win=>{
+      win.saveToLocal = {
+        set: (key, value, ttl) => {
+          if (ttl === 0) return
+          const now = Date.now()
+          const expiry = now + ttl * 86400000
+          const item = {
+            value,
+            expiry
+          }
+          localStorage.setItem(key, JSON.stringify(item))
+        },
+      
+        get: key => {
+          const itemStr = localStorage.getItem(key)
+      
+          if (!itemStr) {
+            return undefined
+          }
+          const item = JSON.parse(itemStr)
+          const now = Date.now()
+      
+          if (now > item.expiry) {
+            localStorage.removeItem(key)
+            return undefined
+          }
+          return item.value
+        }
+      }
+    
+      win.getScript = (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        script.onerror = reject
+        script.onload = script.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          script.onload = script.onreadystatechange = null
+          resolve()
+        }
+
+        Object.keys(attr).forEach(key => {
+          script.setAttribute(key, attr[key])
+        })
+
+        document.head.appendChild(script)
+      })
+    
+      win.getCSS = (url, id = false) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onerror = reject
+        link.onload = link.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          link.onload = link.onreadystatechange = null
+          resolve()
+        }
+        document.head.appendChild(link)
+      })
+    
+      win.activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+        if (t === 'dark') activateDarkMode()
+        else if (t === 'light') activateLightMode()
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+      const detectApple = () => {
+        if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+          document.documentElement.classList.add('apple')
+        }
+      }
+      detectApple()
+    })(window)</script><link rel="stylesheet" href="/css/butterfly_common.css"><meta name="generator" content="Hexo 6.3.0"></head><body><div id="web_bg"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/images/user_256px.jpg" onerror='onerror=null,src="/img/friend_404.gif"' alt="avatar"></div><div class="sidebar-site-data site-data is-center"><a href="/archives/"><div class="headline">Articles</div><div class="length-num">24</div></a><a href="/tags/"><div class="headline">Tags</div><div class="length-num">1</div></a><a href="/categories/"><div class="headline">Categories</div><div class="length-num">12</div></a></div><hr class="custom-hr"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="not-top-img" id="page-header"><nav id="nav"><span id="blog-info"><a href="/" title="Daemon.D.Blog"><span class="site-name">Daemon.D.Blog</span></a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search" href="javascript:void(0);"><i class="fas fa-search fa-fw"></i><span> Search</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div></div><div id="toggle-menu"><a class="site-page" href="javascript:void(0);"><i class="fas fa-bars fa-fw"></i></a></div></div></nav></header><main class="layout" id="content-inner"><div id="post"><div id="post-info"><h1 class="post-title">Consistency in Distributed System - CAP、BASE</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">Created</span><time class="post-meta-date-created" datetime="2020-02-19T16:00:00.000Z" title="Created 2020-02-20 00:00:00">2020-02-20</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">Updated</span><time class="post-meta-date-updated" datetime="2020-02-19T16:00:00.000Z" title="Updated 2020-02-20 00:00:00">2020-02-20</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/System-Design/">System Design</a><i class="fas fa-angle-right post-meta-separator"></i><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/System-Design/Distributed-System/">Distributed System</a></span></div><div class="meta-secondline"></div></div></div><article class="post-content" id="article-container"><h1 id="CAP-Theorem"><a href="#CAP-Theorem" class="headerlink" title="CAP Theorem"></a>CAP Theorem</h1><p>常见的解释是三者最多只能两者相互满足，</p><ul><li><p>C-Consistency: All nodes see the same data at the same time.</p></li><li><p>A-Availability: Reads and writes always succeed</p></li><li><p>P-Partition tolerance: The system continues to operate despite arbitrary message loss or failure of part of the system<br><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/2017/02/20/System%20Design/Distributed%20System/basic/CAP_Theorem_view.png" loading="lazy"></p></li><li><p><strong>CA</strong>: Single site cluster, therefore all nodes are always in contact, when a partition occurs, the system blocks. Choose C and A with compromising of P (Partition Tolerance). e.g. type of applications: Banking and Finance application, a system which must have transaction</p><ul><li>e.g. connected to RDBMS.</li></ul></li><li><p><strong>AP</strong>: System is still available under partitioning, but some of the data returned may be inaccurate. Choose A and P with compromising of C (Consistency). When to choose AP to achieve what is itself a question. There is a use case: return the most recent version of the data you have, which could be stale. This system state will also accept writes that can be processed later when the partition is resolved. Sometimes architects choose <strong>eventual consistency</strong> with compromising Availability or Partition tolerance to some extent.</p><ul><li>Applications: shopping carts, any consumer-facing system, News publishing CMS, couchDB, cassandra.</li><li>Typical protocol: Gossip</li></ul></li><li><p><strong>CP</strong>: Some data may not be accessible, but the rest is still consistent&#x2F;accurate. choose based on the requirement analysis.</p><ul><li>Ecomerence&#x2F;Pay System, MongoDB, zookeeper, Hbase etc.</li></ul></li></ul><blockquote><p>分布式场景下其实是<strong>当P满足时候，A和C只能二选一</strong>， 因为满足CA其实就是单点, 比如当CA数据库节点用主从备份后，如果同时访问从节点，就失去一致性。<br>即当分布式内出现网络中断的时候，无法同时满足一致性和高可用。降低一点一致性要求，是可以达到，比如gossip协议，可以允许等网络恢复后，再把信息传播过去，提供eventual 一致性。</p></blockquote><h1 id="BASE-Achieve-CAP-basically"><a href="#BASE-Achieve-CAP-basically" class="headerlink" title="BASE - Achieve CAP basically"></a>BASE - Achieve CAP basically</h1><p>Basically Available、Soft State、Eventual Consistency. BASE targets to achieve CAP at the same time but not perfect in three aspects, like 80%A+80%C+80%P</p><ul><li>Basically-Available (基本可用): A distributed system should be available to respond with some acknowledgment — even if it’s a failure message, to any incoming request.</li><li>Soft-state (软状态\柔性事务): The system may keep changing states as and when it receives new information. The eventual consistent system must have the soft state.</li><li>Eventual Consistency(最终一致性): The components in the system may not reflect the same value&#x2F;state of a record at a given point in time. They will settle it with time, eventually, though.</li></ul><h2 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h2><ul><li><a target="_blank" rel="noopener" href="https://blog.csdn.net/TJtulong/article/details/106510970">常用的分布式一致性协议</a></li></ul></article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>Author: </span><span class="post-copyright-info"><a href="http://daemondshu.github.io">DaemondShu</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>Link: </span><span class="post-copyright-info"><a href="http://daemondshu.github.io/2020/02/20/System%20Design/Distributed%20System/distributed_consitency/">http://daemondshu.github.io/2020/02/20/System%20Design/Distributed%20System/distributed_consitency/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>Copyright Notice: </span><span class="post-copyright-info">All articles in this blog are licensed under <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> unless stating additionally.</span></div></div><div class="tag_share"><div class="post-meta__tag-list"></div><div class="post_share"><div class="social-share" data-image="/images/bg/next_size.png" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload='this.media="all"'><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/2020/03/10/System%20Design/Network/RSA_PKI_encrypt/" title="非对称加密之PKI体系"><img class="cover" src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/images/bg/next_size.png" onerror='onerror=null,src="/img/404.jpg"' alt="cover of previous post"><div class="pagination-info"><div class="label">Previous</div><div class="prev_info">非对称加密之PKI体系</div></div></a></div><div class="next-post pull-right"><a href="/2020/01/03/System%20Design/Linux/Linux_IO/" title="Linux I/O Model"><img class="cover" src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/images/bg/next_size.png" onerror='onerror=null,src="/img/404.jpg"' alt="cover of next post"><div class="pagination-info"><div class="label">Next</div><div class="next_info">Linux I/O Model</div></div></a></div></nav><hr class="custom-hr"><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> Comment</span></div></div><div class="comment-wrap"><div><div id="giscus-wrap"></div></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/images/user_256px.jpg" onerror='this.onerror=null,this.src="/img/friend_404.gif"' alt="avatar"></div><div class="author-info__name">DaemondShu</div><div class="author-info__description"></div></div><div class="card-info-data site-data is-center"><a href="/archives/"><div class="headline">Articles</div><div class="length-num">24</div></a><a href="/tags/"><div class="headline">Tags</div><div class="length-num">1</div></a><a href="/categories/"><div class="headline">Categories</div><div class="length-num">12</div></a></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>Contents</span><span class="toc-percentage"></span></div><div class="toc-content is-expand"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#CAP-Theorem"><span class="toc-number">1.</span> <span class="toc-text">CAP Theorem</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#BASE-Achieve-CAP-basically"><span class="toc-number">2.</span> <span class="toc-text">BASE - Achieve CAP basically</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Reference"><span class="toc-number">2.1.</span> <span class="toc-text">Reference</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>Recent Post</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2022/10/16/System%20Design/Distributed%20System/consistency_model/" title="Consistency Model Summary in Distributed System">Consistency Model Summary in Distributed System</a><time datetime="2022-10-15T16:00:00.000Z" title="Updated 2022-10-16 00:00:00">2022-10-16</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2022/05/21/Programming/Java/ModernGC/" title="JVM GC(2) | Modern Garbage Collectors - CMS, G1, ZGC, Shenandoah GC">JVM GC(2) | Modern Garbage Collectors - CMS, G1, ZGC, Shenandoah GC</a><time datetime="2022-05-20T16:00:00.000Z" title="Updated 2022-05-21 00:00:00">2022-05-21</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2022/02/20/System%20Design/Distributed%20System/cache_overview/" title="Get Started with Cache">Get Started with Cache</a><time datetime="2022-02-19T16:00:00.000Z" title="Updated 2022-02-20 00:00:00">2022-02-20</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2021/08/20/System%20Design/Distributed%20System/distributed_transcation/" title="Distributed Transaction - 2PC, 3PC">Distributed Transaction - 2PC, 3PC</a><time datetime="2021-08-19T16:00:00.000Z" title="Updated 2021-08-20 00:00:00">2021-08-20</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2021/04/05/Storage/Database/Database_Transaction/" title="Database Transaction - ACID &amp; Isolation Level">Database Transaction - ACID &amp; Isolation Level</a><time datetime="2021-06-09T16:00:00.000Z" title="Updated 2021-06-10 00:00:00">2021-06-10</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2016 - 2023 By DaemondShu</div><div class="framework-info"><span>Framework </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>Theme </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="Read Mode"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="Toggle Between Light And Dark Mode"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="Toggle between Single-column and Double-column"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="Setting"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="Table Of Contents"><i class="fas fa-list-ul"></i></button><a id="to_comment" href="#post-comment" title="Scroll To Comments"><i class="fas fa-comments"></i></a><button id="go-up" type="button" title="Back To Top"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.umd.min.js"></script><script src="https://cdn.jsdelivr.net/npm/vanilla-lazyload/dist/lazyload.iife.min.js"></script><div class="js-pjax"><script>if (!window.MathJax) {
+  window.MathJax = {
+    tex: {
+      inlineMath: [['$', '$'], ['\\(', '\\)']],
+      tags: 'ams'
+    },
+    chtml: {
+      scale: 1.1
+    },
+    options: {
+      renderActions: {
+        findScript: [10, doc => {
+          for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+            const display = !!node.type.match(/; *mode=display/)
+            const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+            const text = document.createTextNode('')
+            node.parentNode.replaceChild(text, node)
+            math.start = {node: text, delim: '', n: 0}
+            math.end = {node: text, delim: '', n: 0}
+            doc.math.push(math)
+          }
+        }, '']
+      }
+    }
+  }
+  
+  const script = document.createElement('script')
+  script.src = 'https://cdn.jsdelivr.net/npm/mathjax/es5/tex-mml-chtml.min.js'
+  script.id = 'MathJax-script'
+  script.async = true
+  document.head.appendChild(script)
+} else {
+  MathJax.startup.document.state(0)
+  MathJax.texReset()
+  MathJax.typesetPromise()
+}</script><script>(()=>{
+  const getGiscusTheme = theme => {
+    return theme === 'dark' ? 'dark' : 'light'
+  }
+
+  const loadGiscus = () => {
+    const config = Object.assign({
+      src: 'https://giscus.app/client.js',
+      'data-repo': 'DaemondShu/DaemondShu.github.io',
+      'data-repo-id': 'MDEwOlJlcG9zaXRvcnkxNzYxMjUzNDI=',
+      'data-category-id': 'DIC_kwDOCn91ns4CTWjW',
+      'data-mapping': 'pathname',
+      'data-theme': getGiscusTheme(document.documentElement.getAttribute('data-theme')),
+      'data-reactions-enabled': '1',
+      crossorigin: 'anonymous',
+      async: true
+    },null)
+
+    const ele = document.createElement('script')
+    for (let key in config) {
+      ele.setAttribute(key, config[key])
+    }
+    document.getElementById('giscus-wrap').appendChild(ele)
+  }
+
+  const changeGiscusTheme = theme => {
+    const sendMessage = message => {
+      const iframe = document.querySelector('iframe.giscus-frame')
+      if (!iframe) return
+      iframe.contentWindow.postMessage({ giscus: message }, 'https://giscus.app')
+    }
+
+    sendMessage({
+      setConfig: {
+        theme: getGiscusTheme(theme)
+      }
+    });
+  }
+
+  btf.addGlobalFn('themeChange', changeGiscusTheme, 'giscus')
+
+  if ('Giscus' === 'Giscus' || !true) {
+    if (true) btf.loadComment(document.getElementById('giscus-wrap'), loadGiscus)
+    else loadGiscus()
+  } else {
+    window.loadOtherComment= loadGiscus
+  }
+})()</script></div><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">Search</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span> Loading the Database</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="Search for Posts" type="text"></div></div><hr><div id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="/js/search/local-search.js"></script></div></div></body></html>

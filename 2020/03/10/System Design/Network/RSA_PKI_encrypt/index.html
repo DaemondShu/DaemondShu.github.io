@@ -1,0 +1,218 @@
+<!DOCTYPE html><html lang="en" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>非对称加密之PKI体系 | Daemon.D.Blog</title><meta name="author" content="DaemondShu"><meta name="copyright" content="DaemondShu"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="加密算法简述所谓加密算法就是指将信息变成密文的计算方法。 可以很简单也可以很复杂。有的加密算法就是对信息进行简单的替换和乱序， 这种加密算法最明显的缺陷就是算法本身必须保证是保密的。现代加密算法通常需要密匙来完成对信息的加密运算， 算法本身是可以公开的，只要保证密匙的安全就能保存信息的安全。 基于密匙的加密算法可以分为两大类:   对称加密算法：加密数据和解密数据都是用的同一个密匙。缺点是密钥不安"><meta property="og:type" content="article"><meta property="og:title" content="非对称加密之PKI体系"><meta property="og:url" content="http://daemondshu.github.io/2020/03/10/System%20Design/Network/RSA_PKI_encrypt/index.html"><meta property="og:site_name" content="Daemon.D.Blog"><meta property="og:description" content="加密算法简述所谓加密算法就是指将信息变成密文的计算方法。 可以很简单也可以很复杂。有的加密算法就是对信息进行简单的替换和乱序， 这种加密算法最明显的缺陷就是算法本身必须保证是保密的。现代加密算法通常需要密匙来完成对信息的加密运算， 算法本身是可以公开的，只要保证密匙的安全就能保存信息的安全。 基于密匙的加密算法可以分为两大类:   对称加密算法：加密数据和解密数据都是用的同一个密匙。缺点是密钥不安"><meta property="og:locale" content="en_US"><meta property="og:image" content="http://daemondshu.github.io/images/bg/next_size.png"><meta property="article:published_time" content="2020-03-09T16:00:00.000Z"><meta property="article:modified_time" content="2020-03-09T16:00:00.000Z"><meta property="article:author" content="DaemondShu"><meta name="twitter:card" content="summary"><meta name="twitter:image" content="http://daemondshu.github.io/images/bg/next_size.png"><link rel="shortcut icon" href="/images/logo/favicon-32x32.png"><link rel="canonical" href="http://daemondshu.github.io/2020/03/10/System%20Design/Network/RSA_PKI_encrypt/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload='this.media="all"'><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.min.css" media="print" onload='this.media="all"'><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: 'Copy Successful',
+    error: 'Copy Error',
+    noSupport: 'Browser Not Supported'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: 'Just now',
+    min: 'minutes ago',
+    hour: 'hours ago',
+    day: 'days ago',
+    month: 'months ago'
+  },
+  copyright: {"limitCount":50,"languages":{"author":"Author: DaemondShu","link":"Link: ","source":"Source: Daemon.D.Blog","info":"Copyright is owned by the author. For commercial reprints, please contact the author for authorization. For non-commercial reprints, please indicate the source."}},
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: 'Load More'
+  },
+  isPhotoFigcaption: false,
+  islazyload: true,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE={title:"非对称加密之PKI体系",isPost:!0,isHome:!1,isHighlightShrink:!1,isToc:!0,postUpdate:"2020-03-10 00:00:00"}</script><script>(win=>{
+      win.saveToLocal = {
+        set: (key, value, ttl) => {
+          if (ttl === 0) return
+          const now = Date.now()
+          const expiry = now + ttl * 86400000
+          const item = {
+            value,
+            expiry
+          }
+          localStorage.setItem(key, JSON.stringify(item))
+        },
+      
+        get: key => {
+          const itemStr = localStorage.getItem(key)
+      
+          if (!itemStr) {
+            return undefined
+          }
+          const item = JSON.parse(itemStr)
+          const now = Date.now()
+      
+          if (now > item.expiry) {
+            localStorage.removeItem(key)
+            return undefined
+          }
+          return item.value
+        }
+      }
+    
+      win.getScript = (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        script.onerror = reject
+        script.onload = script.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          script.onload = script.onreadystatechange = null
+          resolve()
+        }
+
+        Object.keys(attr).forEach(key => {
+          script.setAttribute(key, attr[key])
+        })
+
+        document.head.appendChild(script)
+      })
+    
+      win.getCSS = (url, id = false) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onerror = reject
+        link.onload = link.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          link.onload = link.onreadystatechange = null
+          resolve()
+        }
+        document.head.appendChild(link)
+      })
+    
+      win.activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+        if (t === 'dark') activateDarkMode()
+        else if (t === 'light') activateLightMode()
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+      const detectApple = () => {
+        if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+          document.documentElement.classList.add('apple')
+        }
+      }
+      detectApple()
+    })(window)</script><link rel="stylesheet" href="/css/butterfly_common.css"><meta name="generator" content="Hexo 6.3.0"></head><body><div id="web_bg"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/images/user_256px.jpg" onerror='onerror=null,src="/img/friend_404.gif"' alt="avatar"></div><div class="sidebar-site-data site-data is-center"><a href="/archives/"><div class="headline">Articles</div><div class="length-num">24</div></a><a href="/tags/"><div class="headline">Tags</div><div class="length-num">1</div></a><a href="/categories/"><div class="headline">Categories</div><div class="length-num">12</div></a></div><hr class="custom-hr"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="not-top-img" id="page-header"><nav id="nav"><span id="blog-info"><a href="/" title="Daemon.D.Blog"><span class="site-name">Daemon.D.Blog</span></a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search" href="javascript:void(0);"><i class="fas fa-search fa-fw"></i><span> Search</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div></div><div id="toggle-menu"><a class="site-page" href="javascript:void(0);"><i class="fas fa-bars fa-fw"></i></a></div></div></nav></header><main class="layout" id="content-inner"><div id="post"><div id="post-info"><h1 class="post-title">非对称加密之PKI体系</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">Created</span><time class="post-meta-date-created" datetime="2020-03-09T16:00:00.000Z" title="Created 2020-03-10 00:00:00">2020-03-10</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">Updated</span><time class="post-meta-date-updated" datetime="2020-03-09T16:00:00.000Z" title="Updated 2020-03-10 00:00:00">2020-03-10</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/System-Design/">System Design</a><i class="fas fa-angle-right post-meta-separator"></i><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/System-Design/Network/">Network</a></span></div><div class="meta-secondline"></div></div></div><article class="post-content" id="article-container"><h2 id="加密算法简述"><a href="#加密算法简述" class="headerlink" title="加密算法简述"></a>加密算法简述</h2><p>所谓加密算法就是指将信息变成密文的计算方法。 可以很简单也可以很复杂。有的加密算法就是对信息进行简单的替换和乱序， 这种加密算法最明显的缺陷就是算法本身必须保证是保密的。<br>现代加密算法通常需要密匙来完成对信息的加密运算， 算法本身是可以公开的，只要保证密匙的安全就能保存信息的安全。</p><p>基于密匙的加密算法可以分为两大类:</p><ul><li>对称加密算法：<br>加密数据和解密数据都是用的同一个密匙。缺点是密钥不安全。如AES</li><li>非对称加密算法:<br>密匙分为公钥和私钥，公钥大多数情况下用来加密数据， 私钥大多数情况下用来解密数据； 不能从公钥推导出私钥； 任何人都可以拥有公钥，都可以用来加密数据， 只有拥有私钥的人才能将信息解密。安全,但是速度比对称加密慢.</li></ul><h2 id="PKI-公开密匙体"><a href="#PKI-公开密匙体" class="headerlink" title="PKI 公开密匙体"></a>PKI 公开密匙体</h2><h3 id="相关概念"><a href="#相关概念" class="headerlink" title="相关概念"></a>相关概念</h3><ul><li>PKI：Public Key Infrastructure，公钥基础设施。不是协议,只是一个比较泛的体系基础概念.</li><li>CA：Certificate Of Authority，认证中心。</li><li>RSA: 当今使用最为广泛的非对称加密算法。</li><li>数字证书：提供了一种发布公钥的简便途径；</li><li>一个数字证书包括：拥有者身份信息、公钥、CA数字签名、有效期等其他信息。</li><li>数字签名：用来确认信息发送者的身份，保证信息的完整性和抗否认性。</li></ul><h3 id="RSA-非对称加密解密理论基础"><a href="#RSA-非对称加密解密理论基础" class="headerlink" title="RSA 非对称加密解密理论基础"></a>RSA 非对称加密解密理论基础</h3><p>只能说打个比方, 如果加密就是将信息放入锁盒， 解密就是用钥匙打开。</p><ul><li>公钥是公开的锁盒,谁都买得到相同的,看得到,摸得到. 大家发送消息就是把消息装进锁盒（加密）,送出去.</li><li>私钥是私藏的钥匙,每一个锁盒只有对应的私钥才能打开锁盒,拿到里面的信息.</li></ul><p><strong>注： 实际使用中没有规定公钥必须加密，因为原理上也允许公钥加密，私钥加密。 公钥私钥在加密体系中并无区别，只是能被公开访问的是公钥， 私密持有的是私钥</strong></p><p>但是具体实现原理,我数学不好,建议看阮一峰的博文</p><ul><li>数学基础知识: <a target="_blank" rel="noopener" href="http://www.ruanyifeng.com/blog/2013/06/rsa_algorithm_part_one.html">RSA算法原理（一</a></li><li>加密解密过程: <a target="_blank" rel="noopener" href="http://www.ruanyifeng.com/blog/2013/07/rsa_algorithm_part_two.html">RSA算法原理（二）</a></li></ul><h3 id="签名与数字证书的区别"><a href="#签名与数字证书的区别" class="headerlink" title="签名与数字证书的区别"></a>签名与数字证书的区别</h3><ul><li>加密，是指对某个内容加密，加密后的内容还可以通过解密进行还原。</li><li>签名，是在信息的后面再加上一段内容，可以证明信息没有被修改过。一般是根据信息计算得到一个hash值（即为<code>数字摘要</code>)。信息解密后，通过新hash需要和原hash是否一致判断信息是否修改。</li><li>数字证书,由受信任的CA颁布, 在网上公开,包含签名(防止被篡改), 内含有公钥, 用于证明该公钥的确是该单位的。</li></ul><h3 id="Tradeoff"><a href="#Tradeoff" class="headerlink" title="Tradeoff"></a>Tradeoff</h3><p>非对称加密速递慢不适合用于大量的数据加密传输。 为了实现数据的加密传输， 非对称加密需要和对称加密结合使用， 即</p><ul><li>非对称负责对称密匙交换,也叫<code>对话密钥(session key)</code> &#x3D;&gt; 提高安全性</li><li>对称加密算法负责实际的数据加密 &#x3D;&gt; 提高传输效率</li></ul><p>接下来就要讨论各种主流的通信协议</p><h3 id="SSH"><a href="#SSH" class="headerlink" title="SSH"></a>SSH</h3><p>常用于服务器通信,只涉及客户端和服务端. 有一个服务器在互联网的另一头，你需要远程登录到服务器来执行一些命令配置这台服务器。这个时候你和服务器之间就需要有数据通信。假设客户端叫A，服务器叫B。</p><p>流程:</p><ol><li>A、B之间建立TCP连接</li><li>B生成一对公私密钥</li><li>B把公钥发送给A</li><li>A生成一个用于加密数据的对称密钥K（既我们想通知给客户端的密钥，之后的数据通信都使用这个密钥加密，这个密钥不可让第三方知道）</li><li>A把K用公钥加密发送给B，B解密后，从此A、B之间的通信数据都用K密钥进行加密和解密。</li></ol><p>看上去是完美无瑕的,但是设计时候要考虑任何信息被掉包的情况,比如B被黑客C劫持, 发过来的公钥其实是C的,之后A发送的消息也被C截获,那么K就泄露给了C, 就GG了.</p><p>所以我们在登陆SSH的时候,通常会看到人工确认信息</p><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">The authenticity of host <span class="string">&#x27;xxx.xxx.xxx.xxx (&lt;no hostip for proxy command&gt;)&#x27;</span> can<span class="string">&#x27;t be established.</span></span><br><span class="line"><span class="string">RSA key fingerprint is 23:42:c1:e4:3f:d2:cc:37:1d:89:cb:e7:5d:be:5d:53.</span></span><br><span class="line"><span class="string">Are you sure you want to continue connecting (yes/no)? </span></span><br></pre></td></tr></table></figure><p>这是希望客户端A<strong>人为</strong>去验证一下登陆的服务器是不是B。显然这种方法只适合对服务器熟悉的场合才能使用,而且需要额外确认, 在广大大众上网时候,许多网站都是陌生的,所以这个方法就存留在了程序员的远程登陆</p><h3 id="TLS-x2F-SSL（Secure-Sockets-Layer）"><a href="#TLS-x2F-SSL（Secure-Sockets-Layer）" class="headerlink" title="TLS&#x2F;SSL（Secure Sockets Layer）"></a>TLS&#x2F;SSL（Secure Sockets Layer）</h3><p>SSL和TLS基本一致,就一起讲。<br>在SSL协议中引入了一种类似公共机关（类似于我国的国家公证处）的概念，就是我们熟知的CA(数字证书认证机构),为站点发送数字证书, 来证明服务器可信.</p><p>其大致流程相比于SSH,其实多了一步提前验证服务器。整体可以看成四个阶段<br><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/2020/03/10/System%20Design/Network/RSA_PKI_encrypt/1.png" alt="xx" loading="lazy"></p><h4 id="单向与双向"><a href="#单向与双向" class="headerlink" title="单向与双向"></a>单向与双向</h4><p>具体地, 根据对客户端的验证成都, 又可以分为单向和双向.</p><ul><li>单向SSL<br><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/2020/03/10/System%20Design/Network/RSA_PKI_encrypt/single_direction_ssl.png" alt="2022-11-22T171948" loading="lazy"></li></ul><p>第3步需要服务端的CA数字证书验证服务端</p><ul><li>双向SSL<br><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/2020/03/10/System%20Design/Network/RSA_PKI_encrypt/bidirectional_ssl.png" alt="2022-11-22T172233" loading="lazy"></li></ul><p>第3步需要CA的数字证书验证服务端, 第5步验证客户端</p><ul><li>场景对比<ul><li>SSL单向认证只要求站点部署了SSL证书就行，任何用户都可以去访问（IP被限制除外) 一般web应用都是单向的</li><li>SSL双向认证则是需要服务端与客户端提供身份认证，只能是服务端允许的客户去访问，安全性相对高一些。常用于内网权限限制, 企业应用对接等.</li></ul></li></ul><h3 id="HTTPS"><a href="#HTTPS" class="headerlink" title="HTTPS"></a>HTTPS</h3><p>&#x3D; HTTP+ SSL</p><p>所以会导致原本就慢的握手阶段,更加慢.</p><h2 id="reference"><a href="#reference" class="headerlink" title="reference"></a>reference</h2><p><a target="_blank" rel="noopener" href="https://www.jianshu.com/p/c65fa3af1c01">PKI&#x2F;CA工作原理及架构</a></p><p><a target="_blank" rel="noopener" href="https://www.jianshu.com/p/194f787998c1">使用多个ssh public key</a></p><p><a target="_blank" rel="noopener" href="https://www.jianshu.com/p/29a90d057510">HTTP+SSL&#x3D; HTTPS</a></p><p><a target="_blank" rel="noopener" href="https://blog.csdn.net/zanghuayiren/article/details/88530121">笔记——PKI基础（二）</a></p></article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>Author: </span><span class="post-copyright-info"><a href="http://daemondshu.github.io">DaemondShu</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>Link: </span><span class="post-copyright-info"><a href="http://daemondshu.github.io/2020/03/10/System%20Design/Network/RSA_PKI_encrypt/">http://daemondshu.github.io/2020/03/10/System%20Design/Network/RSA_PKI_encrypt/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>Copyright Notice: </span><span class="post-copyright-info">All articles in this blog are licensed under <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> unless stating additionally.</span></div></div><div class="tag_share"><div class="post-meta__tag-list"></div><div class="post_share"><div class="social-share" data-image="/images/bg/next_size.png" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload='this.media="all"'><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/2020/07/21/Storage/Database/LevelDB_RocksDB/" title="LevelDB 和 RocksDB 结构详解"><img class="cover" src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/images/bg/next_size.png" onerror='onerror=null,src="/img/404.jpg"' alt="cover of previous post"><div class="pagination-info"><div class="label">Previous</div><div class="prev_info">LevelDB 和 RocksDB 结构详解</div></div></a></div><div class="next-post pull-right"><a href="/2020/02/20/System%20Design/Distributed%20System/distributed_consitency/" title="Consistency in Distributed System - CAP、BASE"><img class="cover" src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/images/bg/next_size.png" onerror='onerror=null,src="/img/404.jpg"' alt="cover of next post"><div class="pagination-info"><div class="label">Next</div><div class="next_info">Consistency in Distributed System - CAP、BASE</div></div></a></div></nav><hr class="custom-hr"><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> Comment</span></div></div><div class="comment-wrap"><div><div id="giscus-wrap"></div></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/images/user_256px.jpg" onerror='this.onerror=null,this.src="/img/friend_404.gif"' alt="avatar"></div><div class="author-info__name">DaemondShu</div><div class="author-info__description"></div></div><div class="card-info-data site-data is-center"><a href="/archives/"><div class="headline">Articles</div><div class="length-num">24</div></a><a href="/tags/"><div class="headline">Tags</div><div class="length-num">1</div></a><a href="/categories/"><div class="headline">Categories</div><div class="length-num">12</div></a></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>Contents</span><span class="toc-percentage"></span></div><div class="toc-content is-expand"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8A%A0%E5%AF%86%E7%AE%97%E6%B3%95%E7%AE%80%E8%BF%B0"><span class="toc-number">1.</span> <span class="toc-text">加密算法简述</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#PKI-%E5%85%AC%E5%BC%80%E5%AF%86%E5%8C%99%E4%BD%93"><span class="toc-number">2.</span> <span class="toc-text">PKI 公开密匙体</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%9B%B8%E5%85%B3%E6%A6%82%E5%BF%B5"><span class="toc-number">2.1.</span> <span class="toc-text">相关概念</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#RSA-%E9%9D%9E%E5%AF%B9%E7%A7%B0%E5%8A%A0%E5%AF%86%E8%A7%A3%E5%AF%86%E7%90%86%E8%AE%BA%E5%9F%BA%E7%A1%80"><span class="toc-number">2.2.</span> <span class="toc-text">RSA 非对称加密解密理论基础</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%AD%BE%E5%90%8D%E4%B8%8E%E6%95%B0%E5%AD%97%E8%AF%81%E4%B9%A6%E7%9A%84%E5%8C%BA%E5%88%AB"><span class="toc-number">2.3.</span> <span class="toc-text">签名与数字证书的区别</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Tradeoff"><span class="toc-number">2.4.</span> <span class="toc-text">Tradeoff</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#SSH"><span class="toc-number">2.5.</span> <span class="toc-text">SSH</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#TLS-x2F-SSL%EF%BC%88Secure-Sockets-Layer%EF%BC%89"><span class="toc-number">2.6.</span> <span class="toc-text">TLS&#x2F;SSL（Secure Sockets Layer）</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%8D%95%E5%90%91%E4%B8%8E%E5%8F%8C%E5%90%91"><span class="toc-number">2.6.1.</span> <span class="toc-text">单向与双向</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#HTTPS"><span class="toc-number">2.7.</span> <span class="toc-text">HTTPS</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#reference"><span class="toc-number">3.</span> <span class="toc-text">reference</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>Recent Post</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2022/10/16/System%20Design/Distributed%20System/consistency_model/" title="Consistency Model Summary in Distributed System">Consistency Model Summary in Distributed System</a><time datetime="2022-10-15T16:00:00.000Z" title="Updated 2022-10-16 00:00:00">2022-10-16</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2022/05/21/Programming/Java/ModernGC/" title="JVM GC(2) | Modern Garbage Collectors - CMS, G1, ZGC, Shenandoah GC">JVM GC(2) | Modern Garbage Collectors - CMS, G1, ZGC, Shenandoah GC</a><time datetime="2022-05-20T16:00:00.000Z" title="Updated 2022-05-21 00:00:00">2022-05-21</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2022/02/20/System%20Design/Distributed%20System/cache_overview/" title="Get Started with Cache">Get Started with Cache</a><time datetime="2022-02-19T16:00:00.000Z" title="Updated 2022-02-20 00:00:00">2022-02-20</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2021/08/20/System%20Design/Distributed%20System/distributed_transcation/" title="Distributed Transaction - 2PC, 3PC">Distributed Transaction - 2PC, 3PC</a><time datetime="2021-08-19T16:00:00.000Z" title="Updated 2021-08-20 00:00:00">2021-08-20</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2021/04/05/Storage/Database/Database_Transaction/" title="Database Transaction - ACID &amp; Isolation Level">Database Transaction - ACID &amp; Isolation Level</a><time datetime="2021-06-09T16:00:00.000Z" title="Updated 2021-06-10 00:00:00">2021-06-10</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2016 - 2023 By DaemondShu</div><div class="framework-info"><span>Framework </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>Theme </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="Read Mode"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="Toggle Between Light And Dark Mode"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="Toggle between Single-column and Double-column"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="Setting"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="Table Of Contents"><i class="fas fa-list-ul"></i></button><a id="to_comment" href="#post-comment" title="Scroll To Comments"><i class="fas fa-comments"></i></a><button id="go-up" type="button" title="Back To Top"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.umd.min.js"></script><script src="https://cdn.jsdelivr.net/npm/vanilla-lazyload/dist/lazyload.iife.min.js"></script><div class="js-pjax"><script>if (!window.MathJax) {
+  window.MathJax = {
+    tex: {
+      inlineMath: [['$', '$'], ['\\(', '\\)']],
+      tags: 'ams'
+    },
+    chtml: {
+      scale: 1.1
+    },
+    options: {
+      renderActions: {
+        findScript: [10, doc => {
+          for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+            const display = !!node.type.match(/; *mode=display/)
+            const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+            const text = document.createTextNode('')
+            node.parentNode.replaceChild(text, node)
+            math.start = {node: text, delim: '', n: 0}
+            math.end = {node: text, delim: '', n: 0}
+            doc.math.push(math)
+          }
+        }, '']
+      }
+    }
+  }
+  
+  const script = document.createElement('script')
+  script.src = 'https://cdn.jsdelivr.net/npm/mathjax/es5/tex-mml-chtml.min.js'
+  script.id = 'MathJax-script'
+  script.async = true
+  document.head.appendChild(script)
+} else {
+  MathJax.startup.document.state(0)
+  MathJax.texReset()
+  MathJax.typesetPromise()
+}</script><script>(()=>{
+  const getGiscusTheme = theme => {
+    return theme === 'dark' ? 'dark' : 'light'
+  }
+
+  const loadGiscus = () => {
+    const config = Object.assign({
+      src: 'https://giscus.app/client.js',
+      'data-repo': 'DaemondShu/DaemondShu.github.io',
+      'data-repo-id': 'MDEwOlJlcG9zaXRvcnkxNzYxMjUzNDI=',
+      'data-category-id': 'DIC_kwDOCn91ns4CTWjW',
+      'data-mapping': 'pathname',
+      'data-theme': getGiscusTheme(document.documentElement.getAttribute('data-theme')),
+      'data-reactions-enabled': '1',
+      crossorigin: 'anonymous',
+      async: true
+    },null)
+
+    const ele = document.createElement('script')
+    for (let key in config) {
+      ele.setAttribute(key, config[key])
+    }
+    document.getElementById('giscus-wrap').appendChild(ele)
+  }
+
+  const changeGiscusTheme = theme => {
+    const sendMessage = message => {
+      const iframe = document.querySelector('iframe.giscus-frame')
+      if (!iframe) return
+      iframe.contentWindow.postMessage({ giscus: message }, 'https://giscus.app')
+    }
+
+    sendMessage({
+      setConfig: {
+        theme: getGiscusTheme(theme)
+      }
+    });
+  }
+
+  btf.addGlobalFn('themeChange', changeGiscusTheme, 'giscus')
+
+  if ('Giscus' === 'Giscus' || !true) {
+    if (true) btf.loadComment(document.getElementById('giscus-wrap'), loadGiscus)
+    else loadGiscus()
+  } else {
+    window.loadOtherComment= loadGiscus
+  }
+})()</script></div><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">Search</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span> Loading the Database</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="Search for Posts" type="text"></div></div><hr><div id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="/js/search/local-search.js"></script></div></div></body></html>

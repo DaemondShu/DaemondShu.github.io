@@ -1,0 +1,218 @@
+<!DOCTYPE html><html lang="en" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>基于日志的崩溃后的数据恢复 | redo, undo log | Daemon.D.Blog</title><meta name="author" content="DaemondShu"><meta name="copyright" content="DaemondShu"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="Here&#39;s something encrypted, password is required to continue reading."><meta property="og:type" content="article"><meta property="og:title" content="基于日志的崩溃后的数据恢复 | redo, undo log"><meta property="og:url" content="http://daemondshu.github.io/2019/03/21/Storage/data_crash_recovery/index.html"><meta property="og:site_name" content="Daemon.D.Blog"><meta property="og:description" content="Here&#39;s something encrypted, password is required to continue reading."><meta property="og:locale" content="en_US"><meta property="og:image" content="http://daemondshu.github.io/images/bg/next_size.png"><meta property="article:published_time" content="2019-03-20T16:00:00.000Z"><meta property="article:modified_time" content="2019-03-20T16:00:00.000Z"><meta property="article:author" content="DaemondShu"><meta name="twitter:card" content="summary"><meta name="twitter:image" content="http://daemondshu.github.io/images/bg/next_size.png"><link rel="shortcut icon" href="/images/logo/favicon-32x32.png"><link rel="canonical" href="http://daemondshu.github.io/2019/03/21/Storage/data_crash_recovery/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload='this.media="all"'><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.min.css" media="print" onload='this.media="all"'><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: 'Copy Successful',
+    error: 'Copy Error',
+    noSupport: 'Browser Not Supported'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: 'Just now',
+    min: 'minutes ago',
+    hour: 'hours ago',
+    day: 'days ago',
+    month: 'months ago'
+  },
+  copyright: {"limitCount":50,"languages":{"author":"Author: DaemondShu","link":"Link: ","source":"Source: Daemon.D.Blog","info":"Copyright is owned by the author. For commercial reprints, please contact the author for authorization. For non-commercial reprints, please indicate the source."}},
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: 'Load More'
+  },
+  isPhotoFigcaption: false,
+  islazyload: true,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE={title:"基于日志的崩溃后的数据恢复 | redo, undo log",isPost:!0,isHome:!1,isHighlightShrink:!1,isToc:!0,postUpdate:"2019-03-21 00:00:00"}</script><script>(win=>{
+      win.saveToLocal = {
+        set: (key, value, ttl) => {
+          if (ttl === 0) return
+          const now = Date.now()
+          const expiry = now + ttl * 86400000
+          const item = {
+            value,
+            expiry
+          }
+          localStorage.setItem(key, JSON.stringify(item))
+        },
+      
+        get: key => {
+          const itemStr = localStorage.getItem(key)
+      
+          if (!itemStr) {
+            return undefined
+          }
+          const item = JSON.parse(itemStr)
+          const now = Date.now()
+      
+          if (now > item.expiry) {
+            localStorage.removeItem(key)
+            return undefined
+          }
+          return item.value
+        }
+      }
+    
+      win.getScript = (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        script.onerror = reject
+        script.onload = script.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          script.onload = script.onreadystatechange = null
+          resolve()
+        }
+
+        Object.keys(attr).forEach(key => {
+          script.setAttribute(key, attr[key])
+        })
+
+        document.head.appendChild(script)
+      })
+    
+      win.getCSS = (url, id = false) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onerror = reject
+        link.onload = link.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          link.onload = link.onreadystatechange = null
+          resolve()
+        }
+        document.head.appendChild(link)
+      })
+    
+      win.activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+        if (t === 'dark') activateDarkMode()
+        else if (t === 'light') activateLightMode()
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+      const detectApple = () => {
+        if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+          document.documentElement.classList.add('apple')
+        }
+      }
+      detectApple()
+    })(window)</script><link rel="stylesheet" href="/css/butterfly_common.css"><meta name="generator" content="Hexo 6.3.0"></head><body><div id="web_bg"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/images/user_256px.jpg" onerror='onerror=null,src="/img/friend_404.gif"' alt="avatar"></div><div class="sidebar-site-data site-data is-center"><a href="/archives/"><div class="headline">Articles</div><div class="length-num">24</div></a><a href="/tags/"><div class="headline">Tags</div><div class="length-num">1</div></a><a href="/categories/"><div class="headline">Categories</div><div class="length-num">12</div></a></div><hr class="custom-hr"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="not-top-img" id="page-header"><nav id="nav"><span id="blog-info"><a href="/" title="Daemon.D.Blog"><span class="site-name">Daemon.D.Blog</span></a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search" href="javascript:void(0);"><i class="fas fa-search fa-fw"></i><span> Search</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div></div><div id="toggle-menu"><a class="site-page" href="javascript:void(0);"><i class="fas fa-bars fa-fw"></i></a></div></div></nav></header><main class="layout" id="content-inner"><div id="post"><div id="post-info"><h1 class="post-title">基于日志的崩溃后的数据恢复 | redo, undo log</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">Created</span><time class="post-meta-date-created" datetime="2019-03-20T16:00:00.000Z" title="Created 2019-03-21 00:00:00">2019-03-21</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">Updated</span><time class="post-meta-date-updated" datetime="2019-03-20T16:00:00.000Z" title="Updated 2019-03-21 00:00:00">2019-03-21</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Storage/">Storage</a><i class="fas fa-angle-right post-meta-separator"></i><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Storage/Database/">Database</a></span></div><div class="meta-secondline"></div></div></div><article class="post-content" id="article-container"><div class="hbe hbe-container" id="hexo-blog-encrypt" data-wpm="Oh, this is an invalid password. Check and try again, please." data-whm="OOPS, these decrypted content may changed, but you can still have a look."><script id="hbeData" type="hbeData" data-hmacdigest="15d8148e902bf538b15af1cf4ed188259b1765ad7444ce8e9719ba66f764a764">a1d442672885495a31a2ae2fad6179bb1c04d23b1577c24fbfe4ad3c7a23c2f33ca6de73b9b89594ad949f853bae76847fa7392e8586916645e0dd78434165fbb2501b1f850a245c55323b6329e36e00ac51a4850adef1ae2e5344a4ac7d91c512195f32c58b4b4d4b4851294cdef086ab478640e72732ccea2a4792ad25d68ed261e621250857974923bfb83873fc32474132e3d03fe654957646b1345edf9165bc2df653783ee4bddffb4c8c068943ac08d4510ab808bb28f6098a8c05b3d1325e3015ee03dab6abb1df1b327aebc6154f5dd7a0e2f2199ccaa06c8640d3ce6c51837dcfd52303a80336064eb14fef373a6ca87d141efc2d6e1090fa5d79d2474e36a0c6cd2b9471a1b48458113d631c880d25647eb55ffa9c980f3b2c506d9494663c48950452fd6efe57a987950e473152b39b60f2b6e44fb498509484f9becb948f9cf277e65594777f7e1b07c4caaf3d3451ae40e148ead8d2af0b573340c5b5a0bc9cdfd018397d4d803460e84779fae85a0a95fcae1c3263c945cbf10c10f1fabf972e6febc4f533ecba6bd251740872cfd957cb5dc4f441c2135e4c0937f7291e7d308a306f82f336df002a4211916781e9ec5dcf0213a8e3d530cd94e5f383108bb011e52830acda1ae9a4323df5670b73c88caff17876707c5507aa88d24b8939a9be3062195aaba4f1fb90f8ba43d9533765c5c37d9efb547a197cb58e89d4294aef7db83e981cf8a69edf261e616f8138279aec7c6037c51ef18eddb81138c19d6d0c4ab0be68c2edf14c3d3de4edcab60e84abbb1a152d497890a0325d804b0514876fad517fe0303e1e0320112a587364b857f8b8e60da203d227eeceb8c90b2e27a7953f576bfc5fd6e1cb67b96cf96a3cc676c19fb6f1112c2fdc14d05d5a1bd37bc07dc1ed02e7ef06b1e46c0ef15a3c543d9b0d2e233da45fb00d4c42a5d5a9706ee9279a179074bcb8b80676389f0aa937b7fd4b916de5aae265eb33d25241102e956a829e19a738862b4c943e6b3a097549f4718e33f1336ae12677c98bb9c5509fce116c51f4cdc8d2f6dd783ece908a9f939eb425fc335fdf471b17e139bf82bd3f8192defd63a8736de4968d356a8f8e1b2d7de55b35ef99dd592df3d8ac219062cc69506b6b66f7c3895120669605793794e02e5905fd56f9003343f47ede6b71f672332abb0b2b9b0e01efcaab1071718991214d6ba8a990481a507c58938a430892553b29c780ce61e3e9b650d18bef4ec77a64e8d66e1975522029a6414260f1005ff1eb4591d1f997a1086b6d2043a1b9d625e4be0274d45148d141916c07d702663472347c802a74fc567493e51d3b15e16b689cea58dfce5cc7bf8b1f5152d071cde7ae7fdd396cca06b953ae530b95c7ef3a3d71e3cddd0e13dbe11f17e2a51d7243256e300f76977a38dd93ded42169beb194479f2d31a9b380d55a9dd92e74724532729ddf7d72df7f909db70d81b1df9180010fd55c5e6d5ea948fb5349fcb4ba14c16c20347c40cd48ca1adfa29a30f53c63feafd738654098a2cd8d4d115227dc30156925338f26f2c1d45ed2cae302513d548496dd8740a129f2cfd52a789dcc205e5ad7d9e459e0dee761099d8ba2fa9c934ddcd57f8773c3a23a5722a59579b10855b33bd175a285eb0f64f624164a7a207e93a828dd3201b7b57fda3086f92a1ad46a2d58dc0aeffd160d432d047f134315a1a6e310b379cf8f048d8e461a6ef6d63d37eb4eabf04620d54ed660178a0de6572f2c1f55fa19ea01761e4cee8d0275a86aebd637a2faa510e84288b085ec749863f173d5f208431fc10f846627cd26ff191da366860842358a721f63031ab148846f621e836c528c824f532632a8594e6d594ce32324fbd366bc5c03ae6f36e4e10d792a5ce5bb58c538b01710148c38459f6351b0d9bd5e55aa24e5703c40df38938235e8b64853c087b9aafb12d4e7051f3b942c269d17804e8a9d8f5e50b2577114c392d715c69ba6bdc95b8a346e06a9354554a780a04b529730e83422f732ebd4141e533816707ebf0bed159218a8330114c276feb6b008de8a6a67f0de6a388a321118bc5c9efddadb9205f872a275cdb4bc9614af75ecf47801b5c905cbce8ac4b76f7cd34ae8932921bad93f2aad0099722c2572515a35aa62f14e17fb1341f4b1d4b127ad036dd9b5290992403936104268cd4307bf3a5a48cbffa1f9a38bbf65d2212f364fa924815fa915d57123a5aa31f11a915fc98642d2b42a70d98986044342262297d9804b66a08acef544a7b90b2ae8d02afab4e9c2c44c1558c2b767a7274474f63472229d5434634440095272982593834b22f29a8b4f665d94654d9ebbb9c655c0afcb760103112f192fea834a8f0e0829983acb8d065102fb76950ab0fd3f07926e1d0edfd1bf787773a0638434b0791b0c7da0007e501fb056dcdafff4ecaa305d360fd80a61f41e27c4d0c75f7805f8f1611a887ac6d9bac0d66906ea9fc074aacb6f09bff38f2ba186c250f45ab88d61a5a94e5621d13ed91e2025b316a52184df8ea9d8cf3ebe4362197d6414fef338ac7b4d0e5a02b19a101456df58a8fa2fb9cc8074d81638eba1238e8b3c117099d670f40c2f2f1128ce3955ee1a2354ceb578b684c3609353cee643d2b237acf338f61c8a9eff1e80db2c45cdc738355f42a332a6027793b55a1e171ceefd694d691cf50497ecd34d07c0f9a3ea1bd55df5426d725e7d0c7b266ec8973cf65277ac586b2dc853418541d86f0d68ae44ca771cff705f247569a9221992e983f833026c04b439faf77e22eb6cf4ec0dd719e6445287bd850780859f111f7eab6cf1dae7fc89a465cf86fd8f1f82f269bd12e61d514c59f9838e481ac0a434e4c899a070c42af5a92019a0226978d0603223e3ee9f70d8f77fa2e29f0bd398765ee310971bef025f08736f7fea4d1406147bd9fbcb87faaa845d332b2a6a55906f1a3e4b45d38aec9658aa2d779c16b1b64361fb8d0251c151e7373d7182372fd45e94f6a7ed861185026690924420f968186a29482c9687604c69dd7de24969c75bea029629388e0db973037150d8933a6257ee131fb9c86f88fe84e7172ca889b0e3fa2d7cd0eea628c5632bb8a9c933103adef12fc920e7dde03fbdb558117109ef981927042586b3e805178161de4127f445ac7e9cb0173026399248af38dd3d555137e68694b23d05c5ce3f49ce26aea9291dc0ea8500b9601bda8f0dc4f0415eee6871e51852f7657f90090acdde9ddda9081a3618e3b59f1cb265308b883cc7af9b89baf67e7c94fdc98fb7450ea4e24d394c8a10871843b9fc7b14794835e14fdf57d732e75c5b0d0be8f5745cad3e27825f534c0da8d50914ed605b36b66e47ccb2d37022050173b52a45cd667acf355ca75860117d762ef1aeb8e22869425a4790938250d0e509a172d6ebe5aa96e097a6cfb90e978bb68a33444e6e26f00f589cd167f230c42a42073fdd662a3a6e5a9e68ca045801303574471bfd9ad3bb11b321895183600a9fb85dc194001c90ef68ac0b18d7dbdbe3ba57eef8ba1540c18e8b8933946014c00f863f867f5ce4eb84bdd99c4e2643d9819fe1f416fde70eb9ca0ce5d8daf3f764f5338d1fbbd87cbc4b74e8122c6f73816a8e2b6bfe77f427dc1860d6030a009475019633f94851ee1faa2aaa7f241113336d3a00a895a97ea061273a0d89145cae89dabedf036e84a211fe066f133733575f564d1bd260f70c28efc861ada997bcd731575fa80cb6d8f4269c2840ed1bd3e7b833ece41144bf7645b4fa20e74a5b3f93476c1ccd9ee908b96b7c5e31095ff5c325af8c3a98103912420fd5bf2c7d6ccfe6d8a5cbb14c59fb0d50d40fe319127fad8de0c673e4521328f35d7e627fd9d1b0d304dc8fab4d7055c04d52940cc247400a8af7efdb690a7c4ed2be4735e5275524aff9c4dc56f561f49527608f2758c6bcf61276ebcf35a0b215cfbc0aad38ab58efc3b0207334d0ebba184e7238ac781184a070ca3fd6643ef78417638b276650f518ba7e6c8ef8cde465d78b46729528118e570c23c37cfe27091fb8d65856319ade18f59e99b1dad166aa1be9e42ac68917aceaff75324b1b57eb3547ea8eb1d32f8a86e61075638e879f84103cfe5d1cd5cc6b678ed1d7ffdb765a84a7e9671de8c53b44b6e12d779115bb9b72ea018f45b63bf318d56517889a0287d80a00b28da9d846bbf019c658975d5bc7ec0e5b6cb300392c036bb912abdab01e8b7c79d28c6c2221aea8a9a5df051b962d62e36fd23be94f1221b6958ea0ace71ccfe56e37a66d9f550c1d05959130c5fb8f74718d0507ffd178a6aa9c108c420e227037c3609c81f6a30df886b6702b612c835ca8a88d7db791fccdf326b28944a3a484ffceaa96a060360433823d488e7946ea4b5ee48708a888198d21d20c193d1b437bd59f5a86bc88dc71e88a43e7c4aa3ec071e8074a18349f4b38d44eed8531927c7e6179251280b7ad624cb5c9d2a7dd65026e669150b3f987d71ead8e0af5f566522113a2b2e0136f3d4943ccf61c51ed7389fc3ff32b9d8a8e5d896ad3920aa54481d5a7718fa68e812e0fecf735c54f320ef9ec66397c6969205dbd0f9dc2097c8292dcfdd8492f5af315c62a35f0800d4ddbc6830f2ff9474c3b3588a956b392e3609d2ab86a470abd873e108b7893825ff0e49e4fe1b0397052a3542eaa3e694d7f77e068ff7e7a402bf184c4d5158db01ddf4eb4fe2809d69a83c27dacbb044b711c9ad5a083db439ae37888ccc54ac4a2f83f08529a19bed33c0a34c9f9fba16fc4f6db1ca2a3d14ff8b7827762a9bd39eacf729a0be3ef4daf158e57af9b4cbc03e9610c87ece189443cbe52f91c19ad57fc051fce29b8534303ebb7e97c19ef1401acd626cdb6354b8eb25a8e4c95ebbe929b36edfd374553dcc17c0d10bd6b9dd433b43dda3c1a7deb33728555ae0f05d397a2f71b64aafff1aa40ed929430fb4214b49fdfe07d1eacdc6117c0ce7278776a30ab7a1cd2f7ec4b811bf05b467f1f29f3ebc3f7ee99018b974782df0113f4a5b48f753c6306dbfc9b9170cf50bf9fef37ea00ef273d39940570bbe0e18a1fc5035a20b905c45637367d058fe560582d6b5cb9432c3802a8d1396700d67343ecc8764554adf516672d051ebfee5acff6818a2a1321e21d986dbcca7ba51a1bb8b403758abfe92dcff0083c1d15cd915695d4712c74061734870b2b36e4b51d74fb088c97b54d0edaf1eeeca88b7f0953bf3b2a396f3e823f7d642bd25df12597925664ef6ccd70efb82845111dbde9641a84ce7ef5ee3cecab0f81f3da4ddb3d0815ea562c12685c28bcb6347a076046fa403d8a70d7191601ab7dee4e8a904318cd916fb343be38ae4cf1abc7a476b6c02e021d37a7a0ca9b15b284c2ab23cb3ad80cc4fae0e1d248ef7413edcfed94ba2a1f66ca1763023433cc723b605c244a15d449962c35f884222f7669205cbbe9744d7621b6863c8ddbc5035ae09ef25a91de5ac09dbe38b163c454d1cce0c6e220d10b4604f79a4e73852944b2247ce71fc315b9b0a0323a847c8c2405bcd0f0f125dae673d5a18ec55caedf4838acc7ca923dfd0435f226446fe0c1f5d51b65191e2411aa5d65c450dbaca27778eaeb86de8395078d4e1ad3c8e918d8870640c0e963e6e0ae603c05f8c88afe4370252638d5377c835e71c5423443fd22374c82fa191d3717fcd3e4bcbfcf77380a2b91a06bbd878129915fa5145a629cad8d00f244b0955efa16442f127eb763e33057461deef815daf388a2f40be2b9c4a3c74263771de568ad01a00364d945fb2a7a4513654582724ce55868dbd883d98c103db986fe9902fcedb2c64e0bb9d45356b037db23dc31e36aedf30ab1b8187abdb5a77a19fc261fdacfcbc0c20290808de1f0b9d7f5ba16bc15ca6c7f13f8ef4ad459ed681c2db6588a6c6ef59e384df1f5d6fdb1f42c4443bb310fc9a5c1300eb4a1d0720f0ab123db528611f4a35c9f3f008cd74888765cb51fb60bf4f4188d33206d063b8e35ecf0f2af987901c0d6ac7900b858d37dd9b8e124e7a21cb2bd23b6521e3ec079d0672947179125adfecdc7703be0beb067697c9da99576fb51b84edfe0592d8188c431ce4f02f3e227565c9e824a3957ea6554ba250e425682f1e3e468a3b0c8908280cf4ac6088492459c890d40077b3d5fa79a7f0ab3d522c3a3dad491f642a801b4f01ca0360b9d6110279909867539fac57bfa39cca128b8989a97372d811799b155625234b72c863b4bb22191e0f97dbaee9ce2fd49d707d9e0541e2dd9cbf85a66f06b543128bdedbf85b30387d7207e2c340d658056e27537945e7ded9732b17fe490f33b2a42fe711241c8df810182236ebf38b31c045e3d0ce84bb40639c0e1cf7f08d508bd2c4bd170541db59161d748971a9e9176217a4a8d5432c804f638d914f0ca0c19849736cad587a71eb0f88b63680579e53beed8cff2da4216ce4ca275ec6757a4aaed10a435ac042b9b414fa573136db3d1e5b19fccbff98b08a230243e3ecb968f9bab494f23b9e5e6126e0611471d660cd8d3102e3be0a9465c281cb78402923abd0b346270321351e6208a38443a402efaae5b285eb42b01d4ffa72579815ec1b72454d69213ecf55bcef3b76bc7ced99abe93ab6c74e40bde143f74ce7201e298aacb71116f1f32606a5c22074f8923f3baf69b68d3ed2f60b25fadb25b99c5bc79380e8e514aa24dba450dab8181e9bae91bd29ffe08c9f048c612313fb0e28a1c75cb992d462d3f38ba3aad3c0858f2a836cf69ce7f0c0bb643eda9c62574a44c48bcf83995778a13e1eaa14f2f56e497bda702d96b7c7abc907acfbd1346dfa5f674387fa921bc8a0290a9970789264b103a40929b3ee2ae1956f83b8679d994ae3f89fbe12f924720edfd5520d4ca24bcbd2d0641778eea9cfa6866bd38d534ae74fc13ef5e316109a4f24a40a886ebf75a95f3797bb4938b86a4a24c0ab1cc8fcb0b9c537a94d86cd8f7a1b5cba397afd786ce910e1afc3f7875f9d73178bc9c7a421b4acad65ddab08b5734f87d68e8ded263ffcf673c9f0d465f99a1c93c9997ce45938534b5b3dca3a7175c40d206a049fbe9ff496dc02872ddfe5a32f4d03fd09f84f8a4432768a3565a61531dddf6f9d96c182212b3786f2a5b26fe5ac8f942b0a25f0538929895f0343988f5898f1aabac7bd31b4a3254e590413d94ab86cbdadf3b828284119f88f79596bb0a23c82217d8f132c8349ba2a264b370678fae66b6c20daa5adeea363f8df0923af4647f250aca33442c9d60e0bcfe4329e08f5ca9d25eab091a8bd009a8fa3d0fc11450a3ba6ed703f0ea76ca6fa949d5a0c3bb55b6dd479db9f934a9406d213e99b7b68544506e84103fafcd0b2493291ffb4583678114688024b5d2fab749def69cf979fa4bec3e0d733f1cefb68bf9dece6f26e32f83b82726e026deecc164880f416eaf920d8f17b8d27fef2aca84296af35a7c4d01f02ba2611bc6f284ef28eab7a1bb00e406a12b4392a0a27f2452314aa31826d48d06e72ceaa33acdcf2ca99a73a9acefbdb0d3c1eccd53dff0bfdbb32ef5f31e5a2f633489c8afb767ca1beaafaad1ca0ba0637c7907211e8f94b8eea5ffa21b2688d7a229127d90c6ac120630a6c9fa9c3e3ef41a1b7409b6511c5e84946c5ff0e2436886b9a0c31f3446a574247398ec55d2e1656b10223282177b574df581ffbd27a0d37bf21a1b53c0c153d52364e3edd3f9de21c36761f9b2051ba1e6bdf33199490b5ad8b32498c5786999d2450596e2b2630ae66a2bb8d246c9eeedfd218ee22044afd8f2843f719b0b8d17214a921a1bfd7b988f9755e543590157feb0ac270c7220c28d93afca932ae95ec34898d8603d8ab4479e5b48cba4d088a0a565371b6680b4c81ff55ded9168a6704c8c25de218db72149164c9efc930f927f753783689a8366800de839ff035d9833e05ea3206383f256f6a80081b8d08887dd9527aae2f9d861ae73eece4608d6a125affb493aaf428623c75f1f0ed9622655f90e8dea0d21bc2a67340bfa41382ffdb12f2eb275b788a0be247900ba17522ec1703fa4348a7934e3efa6efcc3019aeef35294067aa587cc2b91374c709f71f46f47448cd507fa08fab78620d0a6b352c9c7f9fa798607d3403966688a0ccef9ab6f7441a15e7216ab871802ac3c7c9e5c48522cf5d38230768f9cf6fe4c7b8059dd6a44ec95a098459f85437c320eacaca61be233ad7c213308587a404f4c4cbfa3494b67bba9e0af93e6d53cb3cc498607b4b625a3be7490e88120d7c27b747ac4f9d62f893695739aaf5a07abb8bf8bdd2e078c55c01872519ccfba556d47d6c2a52f031899f7682b1e8898b606991949c4e65c72ab3d03f293602f2129b8559e01fc5a54a6915f8971a695ec508d283a769eb65949d64aaacc05ca246494db680bd16e77b396dd4cb018a49915f4e71a44703aa2e332104ac98e082ea9f3cbedd7631911060b674a3afee6a5d8daf39ebac6734f3c3e3c31a9afe38b620adbb926d3f44c93177c4c247427a303abeb1eee908ce7894feb9b9ff467cc0bf02c35acf07f2f62ca59566e42bc4ce07cff2b2e1b41f157ff13ce7f039b541051ce6ce8eabbddc2fe1e7c2a4049503ab1da6706c6b969215143821150f449f26f99439c8bf72b4e3d237998804b1f448373c3ce9a7a411bd47f52a8f61264b9c1f43b796d789ce93fe5e271820a46c386794b876a629213c09ba1b54289edb8b6258f349d787f260cc9f23e3f980e563701008bf1d8052a10195d13a27825a899b7979deda6ba272e0799a0e952c008a379294041e5493849c76abec74da94dd57c5e1a0411ff895aabeada1efb03d51dfe0121ab0d5c6bd549ee0ffed891f0e0169c73c14dd5d71c0b310324526ebed0b178071ca84beff8badaf148f99c5a8dc44572cdb892c290007c28e0ebdb38346c00ccfe85b3f9ad79c3c2519b1cb9e4327af8e6c90cac6addc7a77aaa7d16023fe73fadc161022d485dadd583edae50b70036f601afda4dc06addf473578ef309c2f2251cd43e6bb769748d61d3fdc9aea26da8382480b62c4e9af4ff017b4f0cd6de02ec6a6076628f4afc5796530a3a471c0d83913d26783461cf0675ec745636ca5a24c32506673edb01cb1d1837144758922fef9f08c91aa8262629b4791e522c00193a362b9f49b6227b9a4ccabeb315318755709fdd95025ae845644fc11660f7c3a6c637778a358c008b2a2055e25868c8afd6ec71b53a2d3fa5ff148866916667b2a080b86a7f432b0e341ae0ae4cdbfec7a2492263e7336fe7c1929c9f0debea28aafc64ec9438f62e71b577ae8232fe04b1610830d7fc8c7babdde1593db2177c5f3478bfb11d8508785add5a9c88bd5101c6be26df48e9f380788cf24f4d694f22bf6d6773b0c3e7929754e4af78804d0512e90dd244d4e56b2d49cd863e68fb8c4f787171cf05cc9bb1b461b0c1546b80e2b9c4cdfd710f2f9c4574e67d36357d836c0a2b8bb8e6f3da56560d57e3f96a624292c9c50dac1d9dda4e365d7411430a2e199d2efe575eab9c0167783876c3694d59199bfc34ed0f677ae</script><div class="hbe hbe-content"><div class="hbe hbe-input hbe-input-default"><input class="hbe hbe-input-field hbe-input-field-default" type="password" id="hbePass"> <label class="hbe hbe-input-label hbe-input-label-default" for="hbePass"><span class="hbe hbe-input-label-content hbe-input-label-content-default">Hey, password is required here.</span></label></div></div></div><script data-pjax src="/lib/hbe.js"></script><link href="/css/hbe.style.css" rel="stylesheet" type="text/css"></article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>Author: </span><span class="post-copyright-info"><a href="http://daemondshu.github.io">DaemondShu</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>Link: </span><span class="post-copyright-info"><a href="http://daemondshu.github.io/2019/03/21/Storage/data_crash_recovery/">http://daemondshu.github.io/2019/03/21/Storage/data_crash_recovery/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>Copyright Notice: </span><span class="post-copyright-info">All articles in this blog are licensed under <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> unless stating additionally.</span></div></div><div class="tag_share"><div class="post-meta__tag-list"></div><div class="post_share"><div class="social-share" data-image="/images/bg/next_size.png" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload='this.media="all"'><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/2019/04/20/System%20Design/Linux/OS_memAlloc/" title="Operating System | Memory allocation"><img class="cover" src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/images/bg/next_size.png" onerror='onerror=null,src="/img/404.jpg"' alt="cover of previous post"><div class="pagination-info"><div class="label">Previous</div><div class="prev_info">Operating System | Memory allocation</div></div></a></div><div class="next-post pull-right"><a href="/2019/02/01/Programming/Data%20Structure/B_LSM_B-eplison_Tree/" title="Data Structures for DB(External Disk) | B Tree, LSM Tree"><img class="cover" src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/images/bg/next_size.png" onerror='onerror=null,src="/img/404.jpg"' alt="cover of next post"><div class="pagination-info"><div class="label">Next</div><div class="next_info">Data Structures for DB(External Disk) | B Tree, LSM Tree</div></div></a></div></nav><hr class="custom-hr"><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> Comment</span></div></div><div class="comment-wrap"><div><div id="giscus-wrap"></div></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/images/user_256px.jpg" onerror='this.onerror=null,this.src="/img/friend_404.gif"' alt="avatar"></div><div class="author-info__name">DaemondShu</div><div class="author-info__description"></div></div><div class="card-info-data site-data is-center"><a href="/archives/"><div class="headline">Articles</div><div class="length-num">24</div></a><a href="/tags/"><div class="headline">Tags</div><div class="length-num">1</div></a><a href="/categories/"><div class="headline">Categories</div><div class="length-num">12</div></a></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>Contents</span><span class="toc-percentage"></span></div><div class="toc-content toc-div-class is-expand" style="display:none"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#Strawman-Copy-on-write"><span class="toc-number">1.</span> <span class="toc-text">Strawman - Copy-on-write</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#WAL-write-ahead-log"><span class="toc-number">2.</span> <span class="toc-text">WAL write-ahead log</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%86%99%E8%A7%84%E5%88%99"><span class="toc-number">2.1.</span> <span class="toc-text">写规则</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%81%A2%E5%A4%8D"><span class="toc-number">2.2.</span> <span class="toc-text">恢复</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Checkpoint"><span class="toc-number">2.3.</span> <span class="toc-text">Checkpoint</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#redo-log-vs-undo-log-vs-redo-undo-log"><span class="toc-number">2.4.</span> <span class="toc-text">redo-log vs undo-log vs redo-undo log</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>Recent Post</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2022/10/16/System%20Design/Distributed%20System/consistency_model/" title="Consistency Model Summary in Distributed System">Consistency Model Summary in Distributed System</a><time datetime="2022-10-15T16:00:00.000Z" title="Updated 2022-10-16 00:00:00">2022-10-16</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2022/05/21/Programming/Java/ModernGC/" title="JVM GC(2) | Modern Garbage Collectors - CMS, G1, ZGC, Shenandoah GC">JVM GC(2) | Modern Garbage Collectors - CMS, G1, ZGC, Shenandoah GC</a><time datetime="2022-05-20T16:00:00.000Z" title="Updated 2022-05-21 00:00:00">2022-05-21</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2022/02/20/System%20Design/Distributed%20System/cache_overview/" title="Get Started with Cache">Get Started with Cache</a><time datetime="2022-02-19T16:00:00.000Z" title="Updated 2022-02-20 00:00:00">2022-02-20</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2021/08/20/System%20Design/Distributed%20System/distributed_transcation/" title="Distributed Transaction - 2PC, 3PC">Distributed Transaction - 2PC, 3PC</a><time datetime="2021-08-19T16:00:00.000Z" title="Updated 2021-08-20 00:00:00">2021-08-20</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2021/04/05/Storage/Database/Database_Transaction/" title="Database Transaction - ACID &amp; Isolation Level">Database Transaction - ACID &amp; Isolation Level</a><time datetime="2021-06-09T16:00:00.000Z" title="Updated 2021-06-10 00:00:00">2021-06-10</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2016 - 2023 By DaemondShu</div><div class="framework-info"><span>Framework </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>Theme </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="Read Mode"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="Toggle Between Light And Dark Mode"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="Toggle between Single-column and Double-column"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="Setting"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="Table Of Contents"><i class="fas fa-list-ul"></i></button><a id="to_comment" href="#post-comment" title="Scroll To Comments"><i class="fas fa-comments"></i></a><button id="go-up" type="button" title="Back To Top"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.umd.min.js"></script><script src="https://cdn.jsdelivr.net/npm/vanilla-lazyload/dist/lazyload.iife.min.js"></script><div class="js-pjax"><script>if (!window.MathJax) {
+  window.MathJax = {
+    tex: {
+      inlineMath: [['$', '$'], ['\\(', '\\)']],
+      tags: 'ams'
+    },
+    chtml: {
+      scale: 1.1
+    },
+    options: {
+      renderActions: {
+        findScript: [10, doc => {
+          for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+            const display = !!node.type.match(/; *mode=display/)
+            const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+            const text = document.createTextNode('')
+            node.parentNode.replaceChild(text, node)
+            math.start = {node: text, delim: '', n: 0}
+            math.end = {node: text, delim: '', n: 0}
+            doc.math.push(math)
+          }
+        }, '']
+      }
+    }
+  }
+  
+  const script = document.createElement('script')
+  script.src = 'https://cdn.jsdelivr.net/npm/mathjax/es5/tex-mml-chtml.min.js'
+  script.id = 'MathJax-script'
+  script.async = true
+  document.head.appendChild(script)
+} else {
+  MathJax.startup.document.state(0)
+  MathJax.texReset()
+  MathJax.typesetPromise()
+}</script><script>(()=>{
+  const getGiscusTheme = theme => {
+    return theme === 'dark' ? 'dark' : 'light'
+  }
+
+  const loadGiscus = () => {
+    const config = Object.assign({
+      src: 'https://giscus.app/client.js',
+      'data-repo': 'DaemondShu/DaemondShu.github.io',
+      'data-repo-id': 'MDEwOlJlcG9zaXRvcnkxNzYxMjUzNDI=',
+      'data-category-id': 'DIC_kwDOCn91ns4CTWjW',
+      'data-mapping': 'pathname',
+      'data-theme': getGiscusTheme(document.documentElement.getAttribute('data-theme')),
+      'data-reactions-enabled': '1',
+      crossorigin: 'anonymous',
+      async: true
+    },null)
+
+    const ele = document.createElement('script')
+    for (let key in config) {
+      ele.setAttribute(key, config[key])
+    }
+    document.getElementById('giscus-wrap').appendChild(ele)
+  }
+
+  const changeGiscusTheme = theme => {
+    const sendMessage = message => {
+      const iframe = document.querySelector('iframe.giscus-frame')
+      if (!iframe) return
+      iframe.contentWindow.postMessage({ giscus: message }, 'https://giscus.app')
+    }
+
+    sendMessage({
+      setConfig: {
+        theme: getGiscusTheme(theme)
+      }
+    });
+  }
+
+  btf.addGlobalFn('themeChange', changeGiscusTheme, 'giscus')
+
+  if ('Giscus' === 'Giscus' || !true) {
+    if (true) btf.loadComment(document.getElementById('giscus-wrap'), loadGiscus)
+    else loadGiscus()
+  } else {
+    window.loadOtherComment= loadGiscus
+  }
+})()</script></div><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">Search</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span> Loading the Database</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="Search for Posts" type="text"></div></div><hr><div id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="/js/search/local-search.js"></script></div></div></body></html>
